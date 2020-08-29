@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Illuminate</title>
+    <script src="popup.js" charset="utf-8"></script>
+</head>
+
+<style>
+    body {
+        margin: 0;
+    }
+
+    #content .settings-view {
+        width: 250px;
+    }
+
+    .settings-view {
+        display: none;
+    }
+
+    .show-settings-view .settings-view {
+        display: block;
+    }
+
+    .settings-view .boxes {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        grid-gap: 0px;
+        grid-template-areas: "a" "b";
+        align-items: start;
+    }
+
+    .settings-view .box {
+        width: 250px;
+        background-color: rgb(250, 250, 245);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .settings-view .box-input {
+        grid-area: a;
+        height: 40px;
+        text-align: center;
+        justify-content: center;
+        align-content: center;
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-top: 4px;
+        width: 234px;
+    }
+
+    .settings-view .box-info {
+        grid-area: b;
+        padding-left: 8px;
+        padding-right: 8px;
+        width: 234px;
+    }
+
+    .has-disabled .has-enabled {
+        display: none;
+    }
+
+    .has-enabled .has-disabled {
+        display: none;
+    }
+
+    .has-disabled .has-disabled {
+        display: inline-block;
+    }
+
+    .has-enabled .has-enabled {
+        display: inline-block;
+    }
+</style>
+
+<body>
+<div id="content" class="show-settings-view has-disabled">
+    <div class="settings-view">
+        <div class="boxes">
+            <div class="box box-input">
+                <button type="button" class="has-disabled" id="enable-button">
+                    <span>Enable</span>
+                </button>
+                <button type="button" class="has-enabled" id="disable-button">
+                    <span>Disable</span>
+                </button>
+            </div>
+            <div class="box box-info">
+                <div class="has-enabled">
+                    <a class="file-url" target="_blank" href="#">View File</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

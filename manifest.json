@@ -1,0 +1,35 @@
+{
+    "name": "browsing_browser",
+    "version": "1.0",
+    "manifest_version": 2,
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "browser_action": {
+        "default_popup": "popup.html",
+        "default_title": "Browsing Browser"
+    },
+    "background": {
+        "scripts": [
+            "Dropbox-sdk.js",
+            "dexie.js",
+            "background.js"
+        ]
+    },
+    "permissions": [
+        "tabs",
+        "identity",
+        "identity.email"
+    ],
+    "oauth2": {
+        "client_id": "",
+        "scopes": []
+    }
+}
