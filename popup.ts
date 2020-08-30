@@ -1,11 +1,5 @@
 /// <reference path="node_modules/@types/chrome/index.d.ts" />
-
-import {
-  DisableTrackingMessage,
-  EnableTrackingMessage,
-  PopupNeedsInitMessage,
-  SentToPopupMessage,
-} from "./messages";
+/// <reference path="messages.d.ts" />
 
 function waitForDocumentLoad() {
   return document.readyState === "loading"
@@ -19,24 +13,24 @@ function setMode(mode: "enabled" | "disabled") {
   content.classList.add("has-" + mode);
 }
 
-async function main() {
+async function initPopup() {
   await waitForDocumentLoad();
   const enableButton = document.getElementById("enable-button")!,
     disableButton = document.getElementById("disable-button")!;
 
   enableButton.addEventListener("click", async () => {
-    chrome.runtime.sendMessage(<EnableTrackingMessage>{
+    chrome.runtime.sendMessage(<MessageToBackground.EnableTracking>{
       action: "enable_tracking",
     });
   });
 
   disableButton.addEventListener("click", async () => {
-    chrome.runtime.sendMessage(<DisableTrackingMessage>{
+    chrome.runtime.sendMessage(<MessageToBackground.DisableTracking>{
       action: "disable_tracking",
     });
   });
 
-  chrome.runtime.onMessage.addListener(async (req: SentToPopupMessage, _) => {
+  chrome.runtime.onMessage.addListener(async (req: MessageToPopup.Any, _) => {
     if (req.action === "tracking_is_disabled") {
       setMode("disabled");
       [...document.getElementsByClassName("file-url")].forEach((e) => {
@@ -50,9 +44,9 @@ async function main() {
     }
   });
 
-  await chrome.runtime.sendMessage(<PopupNeedsInitMessage>{
+  await chrome.runtime.sendMessage(<MessageToBackground.PopupNeedsInit>{
     action: "popup_needs_init",
   });
 }
 
-main().then(() => console.log("Popup main finished."));
+initPopup().then(() => console.log("Popup main finished"));
