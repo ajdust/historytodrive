@@ -20,7 +20,8 @@ Function Watch {
             Start-Sleep -Milliseconds 100
         }
 
-        Write-Host "Building detected changes.. " -NoNewLine
+        $now = [DateTime]::Now.ToString("s")
+        Write-Host "$now Building detected changes.. " -NoNewLine
         Build
         Write-Host "Done."
         $global:FileChanged = $false
