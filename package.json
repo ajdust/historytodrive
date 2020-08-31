@@ -14,6 +14,7 @@
   "dependencies": {
     "@types/chrome": "0.0.122",
     "@types/har-format": "^1.2.4",
+    "chokidar": "^3.4.2",
     "dexie": "^3.0.2",
     "dropbox": "^5.2.1"
   }
