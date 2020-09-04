@@ -20,6 +20,7 @@
         "scripts": [
             "Dropbox-sdk.js",
             "dexie.js",
+            "xlsx.full.min.js",
             "background.js"
         ]
     },

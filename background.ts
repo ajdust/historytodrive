@@ -1,6 +1,7 @@
 /// <reference path="node_modules/Dropbox/dist/Dropbox-sdk.min.d.ts" />
 /// <reference path="node_modules/@types/chrome/index.d.ts" />
 /// <reference path="node_modules/dexie/dist/dexie.d.ts" />
+/// <reference path="node_modules/xlsx/types/index.d.ts" />
 /// <reference path="messages.d.ts" />
 
 /* Browser extension wrappers */
