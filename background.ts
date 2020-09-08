@@ -56,7 +56,7 @@ class KeyValueDb extends Dexie.Dexie {
 
   async get<T>(key: string, defaultValue: T): Promise<T> {
     const kv = await this.keyValue.get(key);
-    return kv ? (kv as T) : defaultValue;
+    return kv ? (kv.value as T) : defaultValue;
   }
 
   put<T>(key: string, value: T) {
