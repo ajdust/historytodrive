@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="21e70992-8538-42ef-9f2d-fd0bb0317c14" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/build.ps1" beforeDir="false" afterPath="$PROJECT_DIR$/build.ps1" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/background.ts" beforeDir="false" afterPath="$PROJECT_DIR$/background.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -12,6 +12,12 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="JsFlowSettings">
+    <service-enabled>true</service-enabled>
+    <exe-path />
+    <other-services-enabled>true</other-services-enabled>
+    <auto-save>true</auto-save>
   </component>
   <component name="ProjectId" id="1giNvfZIAKQV9liFWJ6kKXu2t6l" />
   <component name="ProjectLevelVcsManager">
@@ -23,7 +29,9 @@
   </component>
   <component name="PropertiesComponent">
     <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
+    <property name="ASKED_SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="node.js.detected.package.eslint" value="true" />
@@ -35,8 +43,9 @@
     <property name="nodejs_package_manager_path" value="npm" />
     <property name="prettierjs.PrettierConfiguration.Package" value="C:\Users\aaron\AppData\Roaming\npm\node_modules\prettier" />
     <property name="run.prettier.on.save" value="true" />
-    <property name="settings.editor.selected.configurable" value="settings.javascript.prettier" />
+    <property name="settings.editor.selected.configurable" value="Settings.JavaScript" />
     <property name="ts.external.directory.path" value="C:\Program Files\JetBrains\WebStorm 2020.1.1\plugins\JavaScriptLanguage\jsLanguageServicesImpl\external" />
+    <property name="vue.rearranger.settings.migration" value="true" />
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -52,34 +61,40 @@
       <workItem from="1598674441718" duration="67000" />
       <workItem from="1598674696785" duration="3936000" />
       <workItem from="1598726710618" duration="5502000" />
-      <workItem from="1598734067634" duration="11435000" />
+      <workItem from="1598734067634" duration="30977000" />
+      <workItem from="1599102431517" duration="152000" />
+      <workItem from="1599102640420" duration="42452000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-    <option name="exactExcludedFiles">
-      <list>
-        <option value="$PROJECT_DIR$/background.js" />
-        <option value="$PROJECT_DIR$/messages.js" />
-        <option value="$PROJECT_DIR$/content.js" />
-        <option value="$PROJECT_DIR$/popup.js" />
-      </list>
-    </option>
   </component>
   <component name="UnknownFeatures">
     <option featureType="com.intellij.fileTypeFactory" implementationName="*.ps1" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="2534" y="-100" key="SettingsEditor" timestamp="1598726757668">
+    <state x="2880" y="75" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog" timestamp="1599102439194">
       <screen x="1920" y="-360" width="2560" height="1400" />
     </state>
-    <state x="2534" y="-100" key="SettingsEditor/0.0.1536.824/1920.-360.2560.1400@1920.-360.2560.1400" timestamp="1598726757668" />
+    <state x="2880" y="75" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/0.0.1536.824/1920.-360.2560.1400@1920.-360.2560.1400" timestamp="1599102439194" />
+    <state x="2534" y="-100" key="SettingsEditor" timestamp="1599519943164">
+      <screen x="1920" y="-360" width="2560" height="1400" />
+    </state>
+    <state x="2534" y="-100" key="SettingsEditor/0.0.1536.824/1920.-360.2560.1400@1920.-360.2560.1400" timestamp="1599519943164" />
     <state x="277" y="57" key="SettingsEditor/0.0.1536.824@0.0.1536.824" timestamp="1598594357146" />
-    <state x="2638" y="-114" width="1120" height="1152" key="search.everywhere.popup" timestamp="1598726737453">
+    <state x="2809" y="7" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser" timestamp="1599104880195">
       <screen x="1920" y="-360" width="2560" height="1400" />
     </state>
-    <state x="2638" y="-114" width="1120" height="1152" key="search.everywhere.popup/0.0.1536.824/1920.-360.2560.1400@1920.-360.2560.1400" timestamp="1598726737453" />
+    <state x="2809" y="7" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser/0.0.1536.824/1920.-360.2560.1400@1920.-360.2560.1400" timestamp="1599104880195" />
+    <state x="2976" y="112" key="refactoring.ChangeSignatureDialog" timestamp="1599501146252">
+      <screen x="1920" y="-360" width="2560" height="1400" />
+    </state>
+    <state x="2976" y="112" key="refactoring.ChangeSignatureDialog/0.0.1536.824/1920.-360.2560.1400@1920.-360.2560.1400" timestamp="1599501146252" />
+    <state x="2638" y="-114" width="1120" height="1152" key="search.everywhere.popup" timestamp="1599106480679">
+      <screen x="1920" y="-360" width="2560" height="1400" />
+    </state>
+    <state x="2638" y="-114" width="1120" height="1152" key="search.everywhere.popup/0.0.1536.824/1920.-360.2560.1400@1920.-360.2560.1400" timestamp="1599106480679" />
     <state x="431" y="145" width="672" height="678" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1598594343592" />
   </component>
 </project>
