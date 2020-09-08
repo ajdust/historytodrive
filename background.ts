@@ -547,36 +547,34 @@ class MessageHandler {
     }
   }
 
+  async append(
+    hs: Headers,
+    fileId: string | undefined,
+    data: MessageToBackground.TrackData
+  ) {
+    const tags = await this.getTags();
+    if (!fileId) throw "Expected fileId";
+    const append = await AppendRowToExcelFile(hs, fileId, [
+      [data.timestamp, tags, data.title, data.host, data.url, data.userAgent],
+    ]);
+    if (!append.success) {
+      const err = append.error;
+      console.warn(`${err.status} while ${err.context}: ${err.response}`);
+    }
+  }
+
   async track(data: MessageToBackground.TrackData) {
     console.log(data);
     if (!(await this.isTracking())) return;
 
-    async function append(
-      hs: Headers,
-      fileId: string | undefined,
-      data: MessageToBackground.TrackData,
-      tags: string
-    ) {
-      if (!fileId) throw "Expected fileId";
-      const append = await AppendRowToExcelFile(hs, fileId, [
-        [data.timestamp, tags, data.title, data.host, data.url, data.userAgent],
-      ]);
-      if (!append.success) {
-        const err = append.error;
-        console.warn(`${err.status} while ${err.context}: ${err.response}`);
-      }
-    }
-
-    const tags = await this.getTags();
     let setup = await this.setupFile();
-
     if (setup.success) {
-      await append(setup.value.headers, setup.value.file.fileId, data, tags);
+      await this.append(setup.value.headers, setup.value.file.fileId, data);
     } else if (!setup.success && setup.error.status === 401) {
       await this.refreshToken();
       setup = await this.setupFile();
       if (setup.success) {
-        await append(setup.value.headers, setup.value.file.fileId, data, tags);
+        await this.append(setup.value.headers, setup.value.file.fileId, data);
       }
     }
 
