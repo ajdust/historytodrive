@@ -428,9 +428,9 @@ class MessageHandler {
     this.kvDb = new KeyValueDb();
   }
 
-  async enableTracking(): Promise<void> {
+  async enableTracking(interactive: boolean = true): Promise<void> {
     const codes = await authenticateForPKCECode({
-      interactive: true,
+      interactive: interactive,
       oauthAuthorizeUri:
         "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
       clientId: this.clientId,
@@ -519,7 +519,7 @@ class MessageHandler {
 
   async refreshToken() {
     try {
-      console.log("Refreshing token");
+      console.log("Trying refresh token");
       const currentResponse = await this.getAuth();
       if (currentResponse === null) {
         throw "Expected not null from getAuth";
@@ -533,6 +533,14 @@ class MessageHandler {
       });
 
       await this.setAuth(tokenResponse);
+      return;
+    } catch (exc) {
+      console.warn(exc);
+    }
+
+    try {
+      console.log("Trying non-interactive sign in");
+      await this.enableTracking(false);
     } catch (exc) {
       console.warn(exc);
       await this.disableTracking(exc.toString());
