@@ -28,7 +28,7 @@
         "identity.email"
     ],
     "web_accessible_resources": ["empty_table.xlsx"],
-    "content_security_policy": "script-src 'self' https://apis.google.com https://csi.gstatic.com; object-src 'self'",
+    "content_security_policy": "script-src 'self'; object-src 'self'",
     "oauth2": {
         "client_id": "",
         "scopes": ["openid", "email"]

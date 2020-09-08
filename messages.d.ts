@@ -1,9 +1,4 @@
-declare namespace MessageToBackground {
-  export type Log = {
-    action: "log";
-    data: string;
-  };
-
+declare namespace Shared {
   export type TrackData = {
     timestamp: string;
     title: string;
@@ -12,9 +7,21 @@ declare namespace MessageToBackground {
     userAgent: string;
   };
 
+  export type Tag = {
+    enabled: boolean;
+    text: string;
+  };
+}
+
+declare namespace MessageToBackground {
+  export type Log = {
+    action: "log";
+    data: string;
+  };
+
   export type Track = {
     action: "track";
-    data: TrackData;
+    data: Shared.TrackData;
   };
 
   export type EnableTracking = {
@@ -31,7 +38,7 @@ declare namespace MessageToBackground {
 
   export type SetTags = {
     action: "set_tags";
-    tags: string;
+    tags: Shared.Tag[];
   };
 
   export type Any =
@@ -47,6 +54,7 @@ declare namespace MessageToPopup {
   export type EnabledTracking = {
     action: "tracking_is_enabled";
     url: string;
+    tags: Shared.Tag[];
   };
 
   export type DisabledTracking = {

@@ -461,6 +461,9 @@ class MessageHandler {
   async disableTracking(error: string | undefined = undefined) {
     await this.clearAuth();
     await this.notifyTrackingStatus(error);
+    if (error) {
+      alert("Please sign in again to enable tracking.");
+    }
   }
 
   async isTracking(): Promise<boolean> {
@@ -471,9 +474,11 @@ class MessageHandler {
   async notifyTrackingStatus(error: string | undefined = undefined) {
     if (await this.isTracking()) {
       const { folderUrl } = (await this.getFileData())!;
+      const tags = await this.getTags();
       send(<MessageToPopup.EnabledTracking>{
         action: "tracking_is_enabled",
         url: folderUrl,
+        tags: tags,
       });
     } else {
       send(<MessageToPopup.DisabledTracking>{
@@ -550,20 +555,34 @@ class MessageHandler {
   async append(
     hs: Headers,
     fileId: string | undefined,
-    data: MessageToBackground.TrackData
+    data: Shared.TrackData
   ) {
     const tags = await this.getTags();
+    const tag = tags
+      .filter((t) => t.enabled)
+      .map((t) => t.text)
+      .join("; ");
     if (!fileId) throw "Expected fileId";
     const append = await AppendRowToExcelFile(hs, fileId, [
-      [data.timestamp, tags, data.title, data.host, data.url, data.userAgent],
+      [data.timestamp, tag, data.title, data.host, data.url, data.userAgent],
     ]);
     if (!append.success) {
       const err = append.error;
       console.warn(`${err.status} while ${err.context}: ${err.response}`);
+      await this.refreshToken();
+      const append2 = await AppendRowToExcelFile(hs, fileId, [
+        [data.timestamp, tag, data.title, data.host, data.url, data.userAgent],
+      ]);
+      if (!append2.success) {
+        const err2 = append.error;
+        const err2msg = `${err2.status} while ${err2.context}: ${err2.response}`;
+        console.warn(err2msg);
+        await this.disableTracking(err2msg);
+      }
     }
   }
 
-  async track(data: MessageToBackground.TrackData) {
+  async track(data: Shared.TrackData) {
     console.log(data);
     if (!(await this.isTracking())) return;
 
@@ -585,14 +604,6 @@ class MessageHandler {
     }
   }
 
-  async setTags(tags: string) {
-    await this.kvDb.put("tags", tags);
-  }
-
-  async getTags(): Promise<string> {
-    return await this.kvDb.get("tags", "");
-  }
-
   async setAuth(auth: PKCEResponse) {
     await this.kvDb.put("auth", auth);
   }
@@ -611,6 +622,25 @@ class MessageHandler {
 
   async getFileData(): Promise<FileData | null> {
     return await this.kvDb.get<FileData | null>("file", null);
+  }
+
+  async getTags(): Promise<Shared.Tag[]> {
+    const tags = await this.kvDb.get<Shared.Tag[]>("tags", []);
+    if (tags.length === 0) {
+      const defaultTags = [
+        { enabled: false, text: "Personal" },
+        { enabled: false, text: "Project" },
+        { enabled: false, text: "Work" },
+        { enabled: false, text: "Other" },
+      ];
+      await this.setTags(defaultTags);
+      return defaultTags;
+    }
+    return tags;
+  }
+
+  async setTags(tags: Shared.Tag[]) {
+    await this.kvDb.put("tags", tags ?? []);
   }
 
   async log(message: string) {
