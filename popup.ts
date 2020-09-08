@@ -36,6 +36,11 @@ async function initPopup() {
       [...document.getElementsByClassName("file-url")].forEach((e) => {
         e.setAttribute("href", "#");
       });
+      if (req.error && req.error.indexOf("user must sign in again") >= 0) {
+        alert(
+          "Authorization has expired; please sign in again to enable history tracking."
+        );
+      }
     } else if (req.action === "tracking_is_enabled") {
       setMode("enabled");
       [...document.getElementsByClassName("folder-url")].forEach((e) => {

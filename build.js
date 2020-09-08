@@ -40,6 +40,7 @@ async function copyToPublish() {
     "./publish/dexie.js"
   );
 
+  await fsp.copyFile("./empty_table.xlsx", "./publish/empty_table.xlsx");
   await fsp.copyFile("./popup.html", "./publish/popup.html");
   await fsp.copyFile("./manifest.json", "./publish/manifest.json");
 }

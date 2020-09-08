@@ -5,9 +5,11 @@ declare namespace MessageToBackground {
   };
 
   export type TrackData = {
-    url: string;
-    host: string;
+    timestamp: string;
     title: string;
+    host: string;
+    url: string;
+    userAgent: string;
   };
 
   export type Track = {
@@ -27,12 +29,18 @@ declare namespace MessageToBackground {
     action: "popup_needs_init";
   };
 
+  export type SetTags = {
+    action: "set_tags";
+    tags: string;
+  };
+
   export type Any =
     | Log
     | Track
     | EnableTracking
     | DisableTracking
-    | PopupNeedsInit;
+    | PopupNeedsInit
+    | SetTags;
 }
 
 declare namespace MessageToPopup {
@@ -43,6 +51,7 @@ declare namespace MessageToPopup {
 
   export type DisabledTracking = {
     action: "tracking_is_disabled";
+    error: string | undefined;
   };
 
   export type Any = DisabledTracking | EnabledTracking;
