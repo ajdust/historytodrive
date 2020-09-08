@@ -1,6 +1,5 @@
 /// <reference path="node_modules/@types/chrome/index.d.ts" />
 /// <reference path="node_modules/dexie/dist/dexie.d.ts" />
-/// <reference path="node_modules/xlsx/types/index.d.ts" />
 /// <reference path="messages.d.ts" />
 
 /* Browser extension wrappers */
@@ -152,20 +151,22 @@ async function authenticateForPKCECode(oauth: {
   return { verifier: codeVerifier, code: params.get("code")! };
 }
 
+interface PKCEResponse {
+  uid: string;
+  access_token: string;
+  expires_in: number;
+  token_type: string;
+  id_token: string;
+  scopes: string;
+}
+
 async function getPKCEAccessToken(oauth: {
   clientId: string;
   oauthTokenUri: string;
   redirectUri: string;
   code: string;
   codeVerifier: string;
-}): Promise<{
-  uid: string;
-  access_token: string;
-  expires_in: number;
-  token_type: string;
-  scope: string;
-  account_id: string;
-}> {
+}): Promise<PKCEResponse> {
   // See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow#request-an-access-token
   const response = await fetch(oauth.oauthTokenUri, {
     body: [
@@ -192,14 +193,7 @@ async function refreshAccessToken(oauth: {
   oauthRefreshUri: string;
   redirectUri: string;
   refreshToken: string;
-}): Promise<{
-  uid: string;
-  access_token: string;
-  expires_in: number;
-  token_type: string;
-  id_token: string;
-  scopes: string;
-}> {
+}): Promise<PKCEResponse> {
   const response = await fetch(oauth.oauthRefreshUri, {
     method: "POST",
     body: [
@@ -220,74 +214,89 @@ async function refreshAccessToken(oauth: {
 
 /* Graph API calls */
 
+interface DriveItem {
+  id: string;
+  fileSystemInfo: { createdDateTime: string; lastModifiedDateTime: string };
+  name: string;
+  size: number;
+  webUrl: string;
+}
+
+interface FolderItem extends DriveItem {
+  folder: { childCount: number };
+}
+
+interface FileItem extends DriveItem {
+  file: { mimeType: string };
+}
+
+type ContentPromise = Promise<{ status: number; content: any }>;
+
 const driveUri = "https://graph.microsoft.com/v1.0/me/drive";
 
 // Get headers for requests to drive API
-function GetDriveHeaders(accessToken: string): Headers {
+function GetDriveHeaders(
+  accessToken: string,
+  contentType: string = "application/json"
+): Headers {
   return new Headers({
     Authorization: `Bearer ${accessToken}`,
-    "Content-Type": "application/json",
+    "Content-Type": contentType,
   });
 }
 
-// List items in a folder
-async function ListChildren(
+async function DriveListChildren(
   headers: Headers,
-  folderPath: string
-): Promise<{ status: number; content: any }> {
-  const response = await fetch(`${driveUri}/${folderPath}/children`, {
+  folderId: string | undefined = undefined
+): ContentPromise {
+  const id = folderId ? `items/${folderId}` : "root";
+  const response = await fetch(`${driveUri}/${id}/children`, {
     headers: headers,
   });
 
-  const content = await response.json();
-  return { status: response.status, content: content };
+  return { status: response.status, content: await response.json() };
 }
 
-// Request to create a folder
-async function CreateFolder(
+async function DriveCreateFolder(
   headers: Headers,
-  folderPath: string,
-  folderName: string
-): Promise<{ status: number; content: any }> {
-  const response = await fetch(`${driveUri}/${folderPath}/children`, {
+  name: string,
+  folderId: string | undefined = undefined
+): ContentPromise {
+  const id = folderId ? `items/${folderId}` : "root";
+  const response = await fetch(`${driveUri}/${id}/children`, {
     method: "POST",
     headers: headers,
     body: JSON.stringify({
-      name: folderName,
+      name: name,
       folder: {},
       "@microsoft.graph.conflictBehavior": "rename",
     }),
   });
+
   return { status: response.status, content: await response.json() };
 }
 
-// Upload an Excel file with an empty table
-async function UploadEmptyExcelFile(
+async function DriveUploadEmptyExcelFile(
   headers: Headers,
-  folderPath: string,
-  folderName: string,
-  filename: string
+  filename: string,
+  folderId: string | undefined = undefined
 ): Promise<{ status: number; content: any }> {
-  const hs = new Headers();
-  headers.forEach((value, key) => hs.set(key, value));
   const empty = await fetch(getURL("empty_table.xlsx"));
   if (empty.status !== 200) {
-    throw `could not get empty excel file, got ${
-      empty.status
-    }: ${await empty.text()}`;
+    throw `error fetching file: ${empty.status}: ${await empty.text()}`;
   }
 
+  const hs = new Headers();
+  headers.forEach((value, key) => hs.set(key, value));
   const emptyBlob = await empty.blob();
   hs.set("Content-Type", emptyBlob.type);
 
-  const response = await fetch(
-    `${driveUri}/${folderPath}:/${folderName}/${filename}:/content`,
-    {
-      method: "PUT",
-      body: emptyBlob,
-      headers: hs,
-    }
-  );
+  const id = folderId ? `items/${folderId}` : "root";
+  const response = await fetch(`${driveUri}/${id}:/${filename}:/content`, {
+    method: "PUT",
+    body: emptyBlob,
+    headers: hs,
+  });
 
   return { status: response.status, content: await response.json() };
 }
@@ -295,71 +304,70 @@ async function UploadEmptyExcelFile(
 // Request to get a folder, creating it if it does not exist
 async function GetOrCreateFolder(
   headers: Headers,
-  folderPath: string,
-  folderName: string
-): Promise<any> {
-  const list = await ListChildren(headers, folderPath);
+  name: string,
+  folderId: string | undefined = undefined
+): Promise<FolderItem> {
+  const list = await DriveListChildren(headers, folderId);
   if (list.status !== 200 && list.status !== 201) {
-    throw `${list.status} while listing ${folderPath}: ${list.content}`;
+    const msg = JSON.stringify(list.content);
+    throw `${list.status} while listing ${folderId}: ${msg}`;
   }
 
-  const matches = list.content.value.filter(
-    (v: any) => v.folder && v.name === folderName
+  const items: DriveItem[] = list.content.value;
+  const matches = items.filter(
+    (v) => (v as FolderItem).folder && v.name === name
   );
 
   if (matches.length > 0) {
-    return matches[0];
+    return matches[0] as FolderItem;
   }
 
-  const create = await CreateFolder(headers, folderPath, folderName);
+  const create = await DriveCreateFolder(headers, name, folderId);
   if (create.status !== 200 && create.status !== 201) {
-    throw `${create.status} while creating a folder: ${create.content}`;
+    const msg = JSON.stringify(create.content);
+    throw `${create.status} while creating folder: ${msg}`;
   }
 
-  return create.content;
+  return create.content as FolderItem;
 }
 
-// Request to get an excel file, creating it if it does not exist
 async function GetOrCreateExcelFile(
   headers: Headers,
-  folderPath: string,
-  folderName: string,
-  filename: string
-): Promise<any> {
-  const folder = await GetOrCreateFolder(headers, folderPath, folderName);
-  const list = await ListChildren(headers, `items/${folder.id}`);
+  filename: string,
+  folderId: string | undefined
+): Promise<FileItem> {
+  const list = await DriveListChildren(headers, folderId);
   if (list.status !== 200 && list.status !== 201) {
-    throw `${list.status} while listing items/${folder.id}: ${list.content}`;
+    const msg = JSON.stringify(list.content);
+    throw `${list.status} while listing ${folderId}: ${msg}`;
   }
 
-  const matched = list.content.value.filter((v: any) => v.name === filename);
-  if (matched.length > 0) {
-    return matched[0];
-  }
-
-  const create = await UploadEmptyExcelFile(
-    headers,
-    folderPath,
-    folderName,
-    filename
+  const items: DriveItem[] = list.content.value;
+  const matched = items.filter(
+    (v) => (v as FileItem).file && v.name === filename
   );
-  if (create.status !== 200 && create.status !== 201) {
-    throw `${create.status} while uploading file: ${create.content}`;
+
+  if (matched.length > 0) {
+    return matched[0] as FileItem;
   }
 
-  return create.content;
+  const upload = await DriveUploadEmptyExcelFile(headers, filename, folderId);
+
+  if (upload.status !== 200 && upload.status !== 201) {
+    const msg = JSON.stringify(upload.content);
+    throw `${upload.status} while uploading: ${msg}`;
+  }
+
+  return upload.content as FileItem;
 }
 
-// Append lines to an existing excel file
-async function AppendToExcelFile(
+async function AppendRowToExcelFile(
   headers: Headers,
-  folderPath: string,
-  folderName: string,
-  filename: string,
+  fileId: string,
   values: string[][]
 ): Promise<{ status: number; content: any }> {
   const baseUri = "https://graph.microsoft.com/v1.0/me/drive";
-  const uri = `${baseUri}/${folderPath}/${folderName}/${filename}:/workbook/tables/History/rows/add`;
+  const uri = `${baseUri}/items/${fileId}/workbook/tables/History/rows/add`;
   const response = await fetch(uri, {
     method: "POST",
     body: JSON.stringify({ index: null, values: values }),
@@ -374,6 +382,7 @@ async function AppendToExcelFile(
 class MessageHandler {
   private readonly clientId: string;
   private kvDb: KeyValueDb;
+  private fileId: string | undefined;
 
   constructor() {
     this.clientId = getClientId();
@@ -434,6 +443,18 @@ class MessageHandler {
   async track(data: MessageToBackground.TrackData) {
     console.log(data);
     if (!(await this.isTracking())) return;
+
+    const auth: PKCEResponse = await this.kvDb.get("auth");
+    const hs = GetDriveHeaders(auth.access_token);
+    if (!this.fileId) {
+      const folder = await GetOrCreateFolder(hs, "History");
+      const file = await GetOrCreateExcelFile(hs, "History.xlsx", folder.id);
+      this.fileId = file.id;
+    }
+
+    await AppendRowToExcelFile(hs, this.fileId!, [
+      [data.host, data.title, data.url],
+    ]);
   }
 
   async log(message: string) {
