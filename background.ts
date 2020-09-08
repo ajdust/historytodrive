@@ -54,12 +54,12 @@ class KeyValueDb extends Dexie.Dexie {
     this.keyValue = this.table("keyValue");
   }
 
-  async get(key: string): Promise<any> {
+  async get<T>(key: string, defaultValue: T): Promise<T> {
     const kv = await this.keyValue.get(key);
-    return kv ? kv.value : null;
+    return kv ? (kv as T) : defaultValue;
   }
 
-  put(key: string, value: Object) {
+  put<T>(key: string, value: T) {
     return this.keyValue.put({ key: key, value: value });
   }
 }
@@ -413,12 +413,15 @@ async function AppendRowToExcelFile(
 }
 
 /* Message handling */
+type FileData = {
+  fileId: string;
+  folderUrl: string;
+  fileYearMonth: string;
+};
 
 class MessageHandler {
   private readonly clientId: string;
   private kvDb: KeyValueDb;
-  private fileId: string | undefined;
-  private fileYearMonth: string | undefined;
 
   constructor() {
     this.clientId = getClientId();
@@ -444,49 +447,59 @@ class MessageHandler {
       code: codes.code,
     });
 
-    await this.kvDb.put("auth", tokenResponse);
-    // TODO: check MS oauth success
+    await this.setAuth(tokenResponse);
+    const setup = await this.setupFile();
+    if (!setup.success) {
+      const err = setup.error;
+      console.warn(`${err.status} while ${err.context}: ${err.response}`);
+      return;
+    }
 
-    send(<MessageToPopup.EnabledTracking>{
-      action: "tracking_is_enabled",
-    });
+    await this.notifyTrackingStatus();
   }
 
   async disableTracking(error: string | undefined = undefined) {
-    await this.kvDb.put("auth", {});
-    send(<MessageToPopup.DisabledTracking>{
-      action: "tracking_is_disabled",
-      error: error,
-    });
+    await this.clearAuth();
+    await this.notifyTrackingStatus(error);
   }
 
   async isTracking(): Promise<boolean> {
-    const auth = await this.kvDb.get("auth");
+    const auth = await this.getAuth();
     return auth?.access_token ? true : false;
   }
 
-  async notifyTrackingStatus() {
+  async notifyTrackingStatus(error: string | undefined = undefined) {
     if (await this.isTracking()) {
+      const { folderUrl } = (await this.getFileData())!;
       send(<MessageToPopup.EnabledTracking>{
         action: "tracking_is_enabled",
+        url: folderUrl,
       });
     } else {
       send(<MessageToPopup.DisabledTracking>{
         action: "tracking_is_disabled",
+        error: error,
       });
     }
   }
 
-  async setupFile(): Promise<Either<Headers, RequestError>> {
+  async setupFile(): Promise<
+    Either<{ headers: Headers; file: FileData }, RequestError>
+  > {
     const ym = yearMonth();
-    const auth: PKCEResponse = await this.kvDb.get("auth");
+    const auth = await this.getAuth();
+    if (auth === null) throw "Expected not null from getAuth";
+
     const hs = GetDriveHeaders(auth.access_token);
-    if (this.fileId && ym === this.fileYearMonth)
-      return { success: true, value: hs };
+    let fileData = await this.getFileData();
+    let { fileId, folderUrl, fileYearMonth } = fileData ?? {};
+    if (fileId && ym === fileYearMonth)
+      return { success: true, value: { headers: hs, file: fileData! } };
 
     const folder = await GetOrCreateFolder(hs, "History");
     if (!folder.success) return folder;
 
+    folderUrl = folder.value.webUrl;
     const file = await GetOrCreateExcelFile(
       hs,
       `History-${ym}.xlsx`,
@@ -494,15 +507,24 @@ class MessageHandler {
     );
     if (!file.success) return file;
 
-    this.fileId = file.value.id;
-    this.fileYearMonth = ym;
-    return { success: true, value: hs };
+    fileData = {
+      fileId: file.value.id,
+      folderUrl: folderUrl,
+      fileYearMonth: ym,
+    };
+    await this.setFileData(fileData);
+
+    return { success: true, value: { headers: hs, file: fileData } };
   }
 
   async refreshToken() {
     try {
       console.log("Refreshing token");
-      const currentResponse = (await this.kvDb.get("auth")) as PKCEResponse;
+      const currentResponse = await this.getAuth();
+      if (currentResponse === null) {
+        throw "Expected not null from getAuth";
+      }
+
       const tokenResponse = await refreshAccessToken({
         clientId: this.clientId,
         oauthRefreshUri:
@@ -510,7 +532,7 @@ class MessageHandler {
         refreshToken: currentResponse.refresh_token,
       });
 
-      await this.kvDb.put("auth", tokenResponse);
+      await this.setAuth(tokenResponse);
     } catch (exc) {
       console.warn(exc);
       await this.disableTracking(exc.toString());
@@ -523,10 +545,11 @@ class MessageHandler {
 
     async function append(
       hs: Headers,
-      fileId: string,
+      fileId: string | undefined,
       data: MessageToBackground.TrackData,
       tags: string
     ) {
+      if (!fileId) throw "Expected fileId";
       const append = await AppendRowToExcelFile(hs, fileId, [
         [data.timestamp, tags, data.title, data.host, data.url, data.userAgent],
       ]);
@@ -538,13 +561,14 @@ class MessageHandler {
 
     const tags = await this.getTags();
     let setup = await this.setupFile();
+
     if (setup.success) {
-      await append(setup.value, this.fileId!, data, tags);
+      await append(setup.value.headers, setup.value.file.fileId, data, tags);
     } else if (!setup.success && setup.error.status === 401) {
       await this.refreshToken();
       setup = await this.setupFile();
       if (setup.success) {
-        await append(setup.value, this.fileId!, data, tags);
+        await append(setup.value.headers, setup.value.file.fileId, data, tags);
       }
     }
 
@@ -560,7 +584,27 @@ class MessageHandler {
   }
 
   async getTags(): Promise<string> {
-    return (await this.kvDb.get("tags")) as string;
+    return await this.kvDb.get("tags", "");
+  }
+
+  async setAuth(auth: PKCEResponse) {
+    await this.kvDb.put("auth", auth);
+  }
+
+  async clearAuth() {
+    await this.kvDb.put("auth", null);
+  }
+
+  async getAuth(): Promise<PKCEResponse | null> {
+    return await this.kvDb.get<PKCEResponse | null>("auth", null);
+  }
+
+  async setFileData(data: FileData) {
+    await this.kvDb.put("file", data);
+  }
+
+  async getFileData(): Promise<FileData | null> {
+    return await this.kvDb.get<FileData | null>("file", null);
   }
 
   async log(message: string) {
