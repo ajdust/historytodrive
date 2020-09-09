@@ -40,12 +40,17 @@ async function copyToPublish() {
     "./publish/dexie.js"
   );
 
+  await fsp.copyFile(
+    "./node_modules/webextension-polyfill/dist/browser-polyfill.js",
+    "./publish/browser-polyfill.js"
+  );
+
   await fsp.copyFile("./empty_table.xlsx", "./publish/empty_table.xlsx");
   await fsp.copyFile("./popup.html", "./publish/popup.html");
   await fsp.copyFile("./manifest.json", "./publish/manifest.json");
 }
 
-// Copy */types/index.d.ts files to @types/*/index.d.ts to satisfy TypeScript
+// Copy */types/webextension.d.ts files to @types/*/webextension.d.ts to satisfy TypeScript
 async function fixTscTypes() {
   const files = getFiles("./node_modules");
   while (await files.next()) {
