@@ -546,20 +546,18 @@ class MessageHandler {
     if (!(await this.isTracking())) return;
 
     let setup = await this.setupFile();
-    if (!setup.success && setup.error.status === 401) {
+    if (!setup.success) {
       if (tryCount > 50) {
         await this.disableTracking(setup.error);
         return;
       }
 
       await new Promise((r) => setTimeout(r, 2000));
-      await this.refreshToken();
-      await this.track(data, tryCount + 1);
-      return;
-    }
+      if (setup.error.status === 401) {
+        await this.refreshToken();
+      }
 
-    if (!setup.success) {
-      await this.disableTracking(setup.error);
+      await this.track(data, tryCount + 1);
       return;
     }
 
@@ -570,20 +568,18 @@ class MessageHandler {
       [[data.timestamp, tag, data.title, data.host, data.url, data.userAgent]]
     );
 
-    if (!append.success && append.error.status === 401) {
+    if (!append.success) {
       if (tryCount > 50) {
         await this.disableTracking(append.error);
         return;
       }
 
       await new Promise((r) => setTimeout(r, 2000));
-      await this.refreshToken();
+      if (append.error.status === 401) {
+        await this.refreshToken();
+      }
       await this.track(data, tryCount + 1);
       return;
-    }
-
-    if (!append.success) {
-      await this.disableTracking(append.error);
     }
   }
 
