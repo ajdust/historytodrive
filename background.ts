@@ -105,7 +105,9 @@ function getUrlParameters(url: string): Map<string, string> {
   return params;
 }
 
-async function authenticateForPKCECode(oauth: {
+/* Authentication */
+
+async function pkceAuthenticate(oauth: {
   interactive: boolean;
   oauthAuthorizeUri: string;
   clientId: string;
@@ -152,7 +154,7 @@ interface PKCEResponse {
   refresh_token: string;
 }
 
-async function getPKCEAccessToken(oauth: {
+async function pkceGetAccessToken(oauth: {
   clientId: string;
   oauthTokenUri: string;
   redirectUri: string;
@@ -180,7 +182,7 @@ async function getPKCEAccessToken(oauth: {
   );
 }
 
-async function refreshAccessToken(oauth: {
+async function pkceRefreshAccessToken(oauth: {
   clientId: string;
   oauthRefreshUri: string;
   refreshToken: string;
@@ -203,7 +205,7 @@ async function refreshAccessToken(oauth: {
   );
 }
 
-/* Graph API calls */
+/* Microsoft graph API calls */
 
 interface DriveItem {
   id: string;
@@ -233,8 +235,7 @@ type Either<TSuccess, TError> =
 
 const driveUri = "https://graph.microsoft.com/v1.0/me/drive";
 
-// Get headers for requests to drive API
-function GetDriveHeaders(
+function driveGetHeaders(
   accessToken: string,
   contentType: string = "application/json"
 ): Headers {
@@ -244,7 +245,7 @@ function GetDriveHeaders(
   });
 }
 
-async function DriveListChildren(
+async function driveListChildren(
   headers: Headers,
   folderId: string | undefined = undefined
 ): Promise<Either<DriveItem[], RequestError>> {
@@ -266,7 +267,7 @@ async function DriveListChildren(
   return { success: true, value: (await response.json()).value };
 }
 
-async function DriveCreateFolder(
+async function driveCreateFolder(
   headers: Headers,
   name: string,
   folderId: string | undefined = undefined
@@ -295,7 +296,7 @@ async function DriveCreateFolder(
   return { success: true, value: await response.json() };
 }
 
-async function DriveUploadEmptyExcelFile(
+async function driveUploadEmptyExcelFile(
   headers: Headers,
   filename: string,
   folderId: string | undefined = undefined
@@ -332,12 +333,12 @@ async function DriveUploadEmptyExcelFile(
   return { success: true, value: await response.json() };
 }
 
-async function GetOrCreateFolder(
+async function driveGetOrCreateFolder(
   headers: Headers,
   name: string,
   folderId: string | undefined = undefined
 ): Promise<Either<FolderItem, RequestError>> {
-  const list = await DriveListChildren(headers, folderId);
+  const list = await driveListChildren(headers, folderId);
   if (!list.success) return list;
 
   const matches = list.value.filter(
@@ -348,15 +349,15 @@ async function GetOrCreateFolder(
     return { success: true, value: matches[0] as FolderItem };
   }
 
-  return await DriveCreateFolder(headers, name, folderId);
+  return await driveCreateFolder(headers, name, folderId);
 }
 
-async function GetOrCreateExcelFile(
+async function driveGetOrCreateExcelFile(
   headers: Headers,
   filename: string,
   folderId: string | undefined
 ): Promise<Either<FileItem, RequestError>> {
-  const list = await DriveListChildren(headers, folderId);
+  const list = await driveListChildren(headers, folderId);
   if (!list.success) return list;
 
   const matched = list.value.filter(
@@ -367,10 +368,10 @@ async function GetOrCreateExcelFile(
     return { success: true, value: matched[0] as FileItem };
   }
 
-  return await DriveUploadEmptyExcelFile(headers, filename, folderId);
+  return await driveUploadEmptyExcelFile(headers, filename, folderId);
 }
 
-async function AppendRowToExcelFile(
+async function driveAppendRowToExcelFile(
   headers: Headers,
   fileId: string,
   values: string[][]
@@ -397,6 +398,7 @@ async function AppendRowToExcelFile(
 }
 
 /* Message handling */
+
 type FileData = {
   fileId: string;
   folderUrl: string;
@@ -413,7 +415,7 @@ class MessageHandler {
   }
 
   async enableTracking(interactive: boolean = true): Promise<void> {
-    const codes = await authenticateForPKCECode({
+    const codes = await pkceAuthenticate({
       interactive: interactive,
       oauthAuthorizeUri:
         "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
@@ -422,7 +424,7 @@ class MessageHandler {
       scopes: ["openid", "files.readwrite"],
     });
 
-    const tokenResponse = await getPKCEAccessToken({
+    const tokenResponse = await pkceGetAccessToken({
       oauthTokenUri:
         "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
       clientId: this.clientId,
@@ -442,11 +444,15 @@ class MessageHandler {
     await this.notifyTrackingStatus();
   }
 
-  async disableTracking(error: string | undefined = undefined) {
+  async disableTracking(error: RequestError | undefined = undefined) {
     await this.clearAuth();
-    await this.notifyTrackingStatus(error);
+    await this.clearFileData();
     if (error) {
-      alert("Please sign in again to enable tracking.");
+      const msg = `${error.status} while ${error.context}: ${error.response}`;
+      await this.notifyTrackingStatus(msg);
+      alert("Please sign in again to enable History Cabinet.");
+    } else {
+      await this.notifyTrackingStatus();
     }
   }
 
@@ -479,19 +485,19 @@ class MessageHandler {
     const auth = await this.getAuth();
     if (auth === null) throw "Expected not null from getAuth";
 
-    const hs = GetDriveHeaders(auth.access_token);
+    const hs = driveGetHeaders(auth.access_token);
     let fileData = await this.getFileData();
     let { fileId, folderUrl, fileYearMonth } = fileData ?? {};
     if (fileId && ym === fileYearMonth)
       return { success: true, value: { headers: hs, file: fileData! } };
 
-    const folder = await GetOrCreateFolder(hs, "History");
+    const folder = await driveGetOrCreateFolder(hs, "HistoryCabinet");
     if (!folder.success) return folder;
 
     folderUrl = folder.value.webUrl;
-    const file = await GetOrCreateExcelFile(
+    const file = await driveGetOrCreateExcelFile(
       hs,
-      `History-${ym}.xlsx`,
+      `HistoryCabinet-${ym}.xlsx`,
       folder.value.id
     );
     if (!file.success) return file;
@@ -507,86 +513,77 @@ class MessageHandler {
   }
 
   async refreshToken() {
+    await this.clearFileData();
     try {
-      console.log("Trying refresh token");
       const currentResponse = await this.getAuth();
-      if (currentResponse === null) {
-        throw "Expected not null from getAuth";
+      if (currentResponse) {
+        const tokenResponse = await pkceRefreshAccessToken({
+          clientId: this.clientId,
+          oauthRefreshUri:
+            "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+          refreshToken: currentResponse.refresh_token,
+        });
+
+        await this.setAuth(tokenResponse);
+        console.log("Token was refreshed.");
+        return;
       }
-
-      const tokenResponse = await refreshAccessToken({
-        clientId: this.clientId,
-        oauthRefreshUri:
-          "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
-        refreshToken: currentResponse.refresh_token,
-      });
-
-      await this.setAuth(tokenResponse);
-      console.log("Refresh successful");
-      return;
     } catch (exc) {
       console.warn(exc);
     }
 
     try {
-      console.log("Trying non-interactive sign in");
       await this.enableTracking(false);
-      console.log("Non-interactive successful");
+      console.log("Non-interactive sign in was successful.");
     } catch (exc) {
       console.warn(exc);
       await this.disableTracking(exc.toString());
     }
   }
 
-  async append(
-    hs: Headers,
-    fileId: string | undefined,
-    data: Shared.TrackData
-  ) {
-    const tags = await this.getTags();
-    const tag = tags
-      .filter((t) => t.enabled)
-      .map((t) => t.text)
-      .join("; ");
-    if (!fileId) throw "Expected fileId";
-    const append = await AppendRowToExcelFile(hs, fileId, [
-      [data.timestamp, tag, data.title, data.host, data.url, data.userAgent],
-    ]);
-    if (!append.success) {
-      const err = append.error;
-      console.warn(`${err.status} while ${err.context}: ${err.response}`);
-      await this.refreshToken();
-      const append2 = await AppendRowToExcelFile(hs, fileId, [
-        [data.timestamp, tag, data.title, data.host, data.url, data.userAgent],
-      ]);
-      if (!append2.success) {
-        const err2 = append.error;
-        const err2msg = `${err2.status} while ${err2.context}: ${err2.response}`;
-        console.warn(err2msg);
-        await this.disableTracking(err2msg);
-      }
-    }
-  }
-
-  async track(data: Shared.TrackData) {
+  async track(data: Shared.TrackData, tryCount: number = 0) {
     console.log(data);
     if (!(await this.isTracking())) return;
 
     let setup = await this.setupFile();
-    if (setup.success) {
-      await this.append(setup.value.headers, setup.value.file.fileId, data);
-    } else if (!setup.success && setup.error.status === 401) {
-      await this.refreshToken();
-      setup = await this.setupFile();
-      if (setup.success) {
-        await this.append(setup.value.headers, setup.value.file.fileId, data);
+    if (!setup.success && setup.error.status === 401) {
+      if (tryCount > 50) {
+        await this.disableTracking(setup.error);
+        return;
       }
+
+      await new Promise((r) => setTimeout(r, 2000));
+      await this.refreshToken();
+      await this.track(data, tryCount + 1);
+      return;
     }
 
     if (!setup.success) {
-      const err = `${setup.error.status} while ${setup.error.context}: ${setup.error.response}`;
-      await this.disableTracking(err);
-      throw err;
+      await this.disableTracking(setup.error);
+      return;
+    }
+
+    const tag = await this.getJoinedTag();
+    const append = await driveAppendRowToExcelFile(
+      setup.value.headers,
+      setup.value.file.fileId,
+      [[data.timestamp, tag, data.title, data.host, data.url, data.userAgent]]
+    );
+
+    if (!append.success && append.error.status === 401) {
+      if (tryCount > 50) {
+        await this.disableTracking(append.error);
+        return;
+      }
+
+      await new Promise((r) => setTimeout(r, 2000));
+      await this.refreshToken();
+      await this.track(data, tryCount + 1);
+      return;
+    }
+
+    if (!append.success) {
+      await this.disableTracking(append.error);
     }
   }
 
@@ -606,8 +603,20 @@ class MessageHandler {
     await this.kvDb.put("file", data);
   }
 
+  async clearFileData() {
+    await this.kvDb.put("file", {});
+  }
+
   async getFileData(): Promise<FileData | null> {
     return await this.kvDb.get<FileData | null>("file", null);
+  }
+
+  async getJoinedTag(): Promise<string> {
+    const tags = await this.getTags();
+    return tags
+      .filter((t) => t.enabled)
+      .map((t) => t.text)
+      .join("; ");
   }
 
   async getTags(): Promise<Shared.Tag[]> {

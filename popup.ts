@@ -37,35 +37,35 @@ function initTags(tags: Shared.Tag[]) {
 
   tagsEl.innerHTML = tagsElBuilder;
   for (let cb of document.getElementsByClassName("tag-checkbox")!) {
-    (<HTMLInputElement>cb).addEventListener("change", function () {
-      checkTag({ enabled: this.checked, text: this.value });
+    (<HTMLInputElement>cb).addEventListener("change", async function () {
+      await checkTag({ enabled: this.checked, text: this.value });
     });
   }
 
   for (let rb of document.getElementsByClassName("remove-tag-button")!) {
-    (<HTMLButtonElement>rb).addEventListener("click", function () {
-      removeTag(this.value);
+    (<HTMLButtonElement>rb).addEventListener("click", async function () {
+      await removeTag(this.value);
     });
   }
 
   (<any>window).tags = tags;
 }
 
-function storeTags() {
-  sendToBackground(<MessageToBackground.SetTags>{
+async function storeTags() {
+  await sendToBackground(<MessageToBackground.SetTags>{
     action: "set_tags",
     tags: (<any>window).tags as Shared.Tag[],
   });
 }
 
-function addTag(tag: Shared.Tag) {
+async function addTag(tag: Shared.Tag) {
   const tags = (<any>window).tags as Shared.Tag[];
   tags.push(tag);
   initTags(tags);
-  storeTags();
+  await storeTags();
 }
 
-function removeTag(tagText: string) {
+async function removeTag(tagText: string) {
   const tags = (<any>window).tags as Shared.Tag[];
   const newTags = [];
   for (let tag of tags) {
@@ -73,10 +73,10 @@ function removeTag(tagText: string) {
   }
 
   initTags(newTags);
-  storeTags();
+  await storeTags();
 }
 
-function checkTag(checkTag: Shared.Tag) {
+async function checkTag(checkTag: Shared.Tag) {
   const tags = (<any>window).tags as Shared.Tag[];
   for (let tag of tags) {
     if (tag.text === checkTag.text) {
@@ -85,7 +85,7 @@ function checkTag(checkTag: Shared.Tag) {
   }
 
   initTags(tags);
-  storeTags();
+  await storeTags();
 }
 
 async function initPopup() {
@@ -120,7 +120,7 @@ async function initPopup() {
       return;
     }
 
-    addTag({ enabled: true, text: addTagInput.value });
+    await addTag({ enabled: true, text: addTagInput.value });
   });
 
   listenToBackground(async (req: MessageToPopup.Any, _) => {

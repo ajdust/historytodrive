@@ -14,7 +14,7 @@
     ],
     "browser_action": {
         "default_popup": "popup.html",
-        "default_title": "Browsing Browser"
+        "default_title": "History Cabinet"
     },
     "background": {
         "scripts": [

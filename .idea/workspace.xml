@@ -4,6 +4,8 @@
     <list default="true" id="21e70992-8538-42ef-9f2d-fd0bb0317c14" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/background.ts" beforeDir="false" afterPath="$PROJECT_DIR$/background.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/popup.ts" beforeDir="false" afterPath="$PROJECT_DIR$/popup.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,6 +49,11 @@
     <property name="ts.external.directory.path" value="C:\Program Files\JetBrains\WebStorm 2020.1.1\plugins\JavaScriptLanguage\jsLanguageServicesImpl\external" />
     <property name="vue.rearranger.settings.migration" value="true" />
   </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\aaron\source\UnnamedCollector" />
+    </key>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -63,7 +70,8 @@
       <workItem from="1598726710618" duration="5502000" />
       <workItem from="1598734067634" duration="30977000" />
       <workItem from="1599102431517" duration="152000" />
-      <workItem from="1599102640420" duration="42452000" />
+      <workItem from="1599102640420" duration="57182000" />
+      <workItem from="1599672926134" duration="10791000" />
     </task>
     <servers />
   </component>
@@ -78,6 +86,10 @@
       <screen x="1920" y="-360" width="2560" height="1400" />
     </state>
     <state x="2880" y="75" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/0.0.1536.824/1920.-360.2560.1400@1920.-360.2560.1400" timestamp="1599102439194" />
+    <state x="2825" y="-92" key="CommitChangelistDialog2" timestamp="1599626495536">
+      <screen x="1920" y="-360" width="2560" height="1400" />
+    </state>
+    <state x="2825" y="-92" key="CommitChangelistDialog2/0.0.1536.824/1920.-360.2560.1400@1920.-360.2560.1400" timestamp="1599626495536" />
     <state x="2534" y="-100" key="SettingsEditor" timestamp="1599519943164">
       <screen x="1920" y="-360" width="2560" height="1400" />
     </state>
