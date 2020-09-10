@@ -44,6 +44,7 @@ function initTags(tags: Shared.Tag[]) {
 
   for (let rb of document.getElementsByClassName("remove-tag-button")!) {
     (<HTMLButtonElement>rb).addEventListener("click", async function () {
+      rb.setAttribute("disabled", "");
       await removeTag(this.value);
     });
   }
@@ -98,32 +99,44 @@ async function initPopup() {
     ),
     addTagButton = <HTMLButtonElement>(
       document.getElementById("add-tag-button")!
-    );
+    ),
+    addTagInput = <HTMLInputElement>document.getElementById("add-tag-input");
 
   enableButton.addEventListener("click", async () => {
+    enableButton.setAttribute("disabled", "");
     await sendToBackground(<MessageToBackground.EnableTracking>{
       action: "enable_tracking",
     });
   });
 
   disableButton.addEventListener("click", async () => {
+    disableButton.setAttribute("disabled", "");
     await sendToBackground(<MessageToBackground.DisableTracking>{
       action: "disable_tracking",
     });
   });
 
+  addTagInput.addEventListener("keyup", async (e) => {
+    if (e.key === "Enter") {
+      addTagButton.click();
+    }
+  });
+
   addTagButton.addEventListener("click", async () => {
-    const addTagInput = <HTMLInputElement>(
-      document.getElementById("add-tag-input")!
-    );
     if (!addTagInput.value.replace(/ /g, "")) {
       return;
     }
 
+    addTagButton.setAttribute("disabled", "");
     await addTag({ enabled: true, text: addTagInput.value });
+    addTagButton.removeAttribute("disabled");
+    addTagInput.value = "";
   });
 
   listenToBackground(async (req: MessageToPopup.Any, _) => {
+    enableButton.removeAttribute("disabled");
+    disableButton.removeAttribute("disabled");
+    addTagButton.removeAttribute("disabled");
     if (req.action === "tracking_is_disabled") {
       setMode("disabled");
       [...document.getElementsByClassName("file-url")].forEach((e) => {
