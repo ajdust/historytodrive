@@ -114,7 +114,6 @@ async function pkceAuthenticate(oauth: {
 }): Promise<{ verifier: string; code: string }> {
   // See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow#request-an-authorization-code
   // and https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth?view=odsp-graph-online#authentication-scopes
-  // TODO: replace randomString with randomCryptoString method
   const [authState, codeVerifier] = [
     await randomString(),
     await randomString(),
