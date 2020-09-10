@@ -1,6 +1,8 @@
 /// <reference path="node_modules/@types/chrome/index.d.ts" />
+/// <reference path="webextension.d.ts" />
 // Run on each page load - send message to background
-chrome.runtime.sendMessage(<MessageToBackground.Track>{
+const runtime = chrome ? chrome.runtime : browser.runtime;
+runtime.sendMessage(<MessageToBackground.Track>{
   action: "track",
   data: {
     url: window.location.href,

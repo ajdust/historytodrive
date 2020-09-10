@@ -1,5 +1,5 @@
 {
-    "name": "browsing_browser",
+    "name": "History Cabinet",
     "version": "1.0",
     "manifest_version": 2,
     "content_scripts": [
@@ -19,18 +19,11 @@
     "background": {
         "scripts": [
             "dexie.js",
+            "browser-polyfill.js",
             "background.js"
         ]
     },
-    "permissions": [
-        "tabs",
-        "identity",
-        "identity.email"
-    ],
+    "permissions": [ "tabs", "identity" ],
     "web_accessible_resources": ["empty_table.xlsx"],
-    "content_security_policy": "script-src 'self'; object-src 'self'",
-    "oauth2": {
-        "client_id": "",
-        "scopes": ["openid", "email"]
-    }
+    "content_security_policy": "script-src 'self'; object-src 'self'"
 }

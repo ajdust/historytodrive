@@ -4497,8 +4497,6 @@ export declare namespace Manifest {
      * Optional.
      */
     homepage_url?: string;
-
-    oauth2?: { client_id: string };
   }
 
   /**

@@ -1,5 +1,5 @@
-/// <reference path="node_modules/@types/chrome/index.d.ts" />
 /// <reference path="node_modules/dexie/dist/dexie.d.ts" />
+/// <reference path="webextension.d.ts" />
 /// <reference path="messages.d.ts" />
 
 /* Browser extension wrappers */
@@ -8,45 +8,31 @@ function authenticate(details: {
   url: string;
   interactive: boolean;
 }): Promise<string> {
-  return new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow(details, function (redirectedTo) {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-      } else {
-        resolve(redirectedTo);
-      }
-    });
-  });
+  return browser.identity.launchWebAuthFlow(details);
 }
 
 function getRedirectURL(path: string): string {
-  return chrome.identity.getRedirectURL(path);
+  return browser.identity.getRedirectURL(path);
 }
 
 function getURL(path: string): string {
-  return chrome.runtime.getURL(path);
+  return browser.runtime.getURL(path);
 }
 
-function getClientId(): string {
-  return chrome.runtime.getManifest().oauth2!.client_id;
-}
-
-function send(message: any) {
-  chrome.runtime.sendMessage(message);
+function send(message: any): Promise<any> {
+  return browser.runtime.sendMessage(message);
 }
 
 function listen<T extends (message: any, ...other: any[]) => void>(
   callback: T
 ) {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    callback(message, sender, sendResponse);
-  });
+  browser.runtime.onMessage.addListener(callback);
 }
 
 /* Key value database */
 
 class KeyValueDb extends Dexie.Dexie {
-  private keyValue: Dexie.Table<any, Dexie.IndexableType>;
+  private keyValue: Dexie.Table;
 
   constructor() {
     super("keyValue");
@@ -362,8 +348,7 @@ async function GetOrCreateFolder(
     return { success: true, value: matches[0] as FolderItem };
   }
 
-  const create = await DriveCreateFolder(headers, name, folderId);
-  return create;
+  return await DriveCreateFolder(headers, name, folderId);
 }
 
 async function GetOrCreateExcelFile(
@@ -382,8 +367,7 @@ async function GetOrCreateExcelFile(
     return { success: true, value: matched[0] as FileItem };
   }
 
-  const upload = await DriveUploadEmptyExcelFile(headers, filename, folderId);
-  return upload;
+  return await DriveUploadEmptyExcelFile(headers, filename, folderId);
 }
 
 async function AppendRowToExcelFile(
@@ -424,7 +408,7 @@ class MessageHandler {
   private kvDb: KeyValueDb;
 
   constructor() {
-    this.clientId = getClientId();
+    this.clientId = "";
     this.kvDb = new KeyValueDb();
   }
 
@@ -468,20 +452,20 @@ class MessageHandler {
 
   async isTracking(): Promise<boolean> {
     const auth = await this.getAuth();
-    return auth?.access_token ? true : false;
+    return !!auth?.access_token;
   }
 
   async notifyTrackingStatus(error: string | undefined = undefined) {
     if (await this.isTracking()) {
       const { folderUrl } = (await this.getFileData())!;
       const tags = await this.getTags();
-      send(<MessageToPopup.EnabledTracking>{
+      await send(<MessageToPopup.EnabledTracking>{
         action: "tracking_is_enabled",
         url: folderUrl,
         tags: tags,
       });
     } else {
-      send(<MessageToPopup.DisabledTracking>{
+      await send(<MessageToPopup.DisabledTracking>{
         action: "tracking_is_disabled",
         error: error,
       });
@@ -538,6 +522,7 @@ class MessageHandler {
       });
 
       await this.setAuth(tokenResponse);
+      console.log("Refresh successful");
       return;
     } catch (exc) {
       console.warn(exc);
@@ -546,6 +531,7 @@ class MessageHandler {
     try {
       console.log("Trying non-interactive sign in");
       await this.enableTracking(false);
+      console.log("Non-interactive successful");
     } catch (exc) {
       console.warn(exc);
       await this.disableTracking(exc.toString());

@@ -1,16 +1,14 @@
-/// <reference path="node_modules/@types/chrome/index.d.ts" />
+/// <reference path="webextension.d.ts" />
 /// <reference path="messages.d.ts" />
 
-function sendToBackground(message: any) {
-  chrome.runtime.sendMessage(message);
+function sendToBackground(message: any): Promise<any> {
+  return browser.runtime.sendMessage(message);
 }
 
 function listenToBackground<T extends (message: any, ...other: any[]) => void>(
   callback: T
 ) {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    callback(message, sender, sendResponse);
-  });
+  browser.runtime.onMessage.addListener(callback);
 }
 
 function waitForDocumentLoad() {
@@ -103,13 +101,13 @@ async function initPopup() {
     );
 
   enableButton.addEventListener("click", async () => {
-    sendToBackground(<MessageToBackground.EnableTracking>{
+    await sendToBackground(<MessageToBackground.EnableTracking>{
       action: "enable_tracking",
     });
   });
 
   disableButton.addEventListener("click", async () => {
-    sendToBackground(<MessageToBackground.DisableTracking>{
+    await sendToBackground(<MessageToBackground.DisableTracking>{
       action: "disable_tracking",
     });
   });
@@ -140,7 +138,7 @@ async function initPopup() {
     }
   });
 
-  sendToBackground(<MessageToBackground.PopupNeedsInit>{
+  await sendToBackground(<MessageToBackground.PopupNeedsInit>{
     action: "popup_needs_init",
   });
 }

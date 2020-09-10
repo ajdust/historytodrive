@@ -4,12 +4,32 @@
 <head>
     <meta charset="UTF-8">
     <title>Illuminate</title>
+    <script src="browser-polyfill.js" charset="utf-8"></script>
     <script src="popup.js" charset="utf-8"></script>
 </head>
 
 <style>
     body {
         margin: 0;
+        min-width: 200px;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+
+    button {
+        font-size: 14px;
+    }
+
+    .folder-url {
+        font-size: 12px;
+    }
+
+    #title-header {
+        font-variant: small-caps;
+        margin-bottom: 0;
+        margin-top: 5px;
+        color: gray;
+        text-align: center;
+        font-size: 1rem;
     }
 
     .settings-view {
@@ -21,11 +41,11 @@
     }
 
     .settings-view .boxes {
-        display: grid;
-        grid-template-columns: repeat(8, 1fr);
-        grid-gap: 0px;
-        grid-template-areas: "a" "b";
-        align-items: start;
+        /*display: grid;*/
+        /*grid-template-columns: repeat(8, 1fr);*/
+        /*grid-gap: 0px;*/
+        /*grid-template-areas: "a" "b";*/
+        /*align-items: start;*/
     }
 
     .settings-view .box {
@@ -35,18 +55,15 @@
     }
 
     .settings-view .box-input {
-        grid-area: a;
-        height: 40px;
+        height: 35px;
         text-align: center;
         justify-content: center;
         align-content: center;
         padding-left: 8px;
         padding-right: 8px;
-        padding-top: 4px;
     }
 
     .settings-view .box-info {
-        grid-area: b;
         padding-left: 8px;
         padding-right: 8px;
     }
@@ -74,7 +91,9 @@
     #tag-area h3 {
         font-variant: small-caps;
         margin-bottom: 5px;
+        margin-top: 10px;
         color: gray;
+        font-size: 0.9rem;
     }
 
     #tags {
@@ -111,6 +130,7 @@
 <body>
 <div id="content" class="show-settings-view has-disabled">
     <div class="settings-view">
+        <h3 id="title-header">History Cabinet</h3>
         <div class="boxes">
             <div class="box box-input">
                 <button type="button" class="has-disabled" id="enable-button">
@@ -122,13 +142,13 @@
             </div>
             <div class="box box-info">
                 <div class="has-enabled">
-                    <a class="folder-url" target="_blank" href="#">View Folder</a>
+                    <a class="folder-url" target="_blank" href="#">View in OneDrive</a>
                     <div id="tag-area">
                         <h3>Tags</h3>
                         <div id="tags">
                         </div>
                         <div id="add-tag">
-                            <input type="text" id="add-tag-input" />
+                            <input type="text" id="add-tag-input" maxlength="30"/>
                             <button type="button" id="add-tag-button">Add</button>
                         </div>
                     </div>
@@ -139,7 +159,9 @@
 </div>
 <div id="tag-template" style="display:none">
     <div class="tag">
-        <input type="checkbox" class="tag-checkbox" checked value="_TAG_TEXT_" /><span class="tag-label">_TAG_TEXT_</span><button class="remove-tag-button" value="_TAG_TEXT_" type="button">Remove</button>
+        <input type="checkbox" class="tag-checkbox" checked value="_TAG_TEXT_"/><span
+            class="tag-label">_TAG_TEXT_</span>
+        <button class="remove-tag-button" value="_TAG_TEXT_" type="button">Remove</button>
     </div>
 </div>
 </body>
