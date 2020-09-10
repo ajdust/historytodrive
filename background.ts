@@ -57,16 +57,14 @@ function yearMonth(): string {
   return `${dt.getFullYear()}-${dt.getMonth() + 1}`;
 }
 
-function randomString(length: number) {
-  let text = "";
-  for (let i = 0; i < length; ++i) {
-    const index = Math.floor(Math.random() * 62);
-    if (index < 10) text += String.fromCharCode(index + 48);
-    else if (index < 36) text += String.fromCharCode(index + 55);
-    else text += String.fromCharCode(index + 61);
-  }
-
-  return text;
+async function randomString(): Promise<string> {
+  const key = await crypto.subtle.generateKey(
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
+  );
+  const jwk = await crypto.subtle.exportKey("jwk", key);
+  return jwk.k!;
 }
 
 function arrayToBase64(array: Uint8Array): string {
@@ -117,7 +115,10 @@ async function pkceAuthenticate(oauth: {
   // See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow#request-an-authorization-code
   // and https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth?view=odsp-graph-online#authentication-scopes
   // TODO: replace randomString with randomCryptoString method
-  const [authState, codeVerifier] = [randomString(50), randomString(50)];
+  const [authState, codeVerifier] = [
+    await randomString(),
+    await randomString(),
+  ];
   const authUrl =
     `${oauth.oauthAuthorizeUri}?` +
     [
@@ -578,6 +579,7 @@ class MessageHandler {
       if (append.error.status === 401) {
         await this.refreshToken();
       }
+
       await this.track(data, tryCount + 1);
       return;
     }
