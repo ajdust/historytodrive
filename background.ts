@@ -407,9 +407,13 @@ type FileData = {
 
 class MessageHandler {
   private kvDb: KeyValueDb;
+  private readonly name: string;
+  private readonly baseFilename: string;
 
   constructor() {
     this.kvDb = new KeyValueDb();
+    this.name = browser.runtime.getManifest().name;
+    this.baseFilename = this.name.replace(/ /g, "");
   }
 
   async enableTracking(interactive: boolean = true): Promise<void> {
@@ -477,7 +481,7 @@ class MessageHandler {
     if (error) {
       const msg = `${error.status} while ${error.context}: ${error.response}`;
       await this.notifyTrackingStatus(msg);
-      alert("Please sign in again to enable History Cabinet.");
+      alert(`Please sign in again to enable ${this.name}`);
     } else {
       await this.notifyTrackingStatus();
     }
@@ -518,13 +522,13 @@ class MessageHandler {
     if (fileId && ym === fileYearMonth)
       return { success: true, value: { headers: hs, file: fileData! } };
 
-    const folder = await driveGetOrCreateFolder(hs, "HistoryCabinet");
+    const folder = await driveGetOrCreateFolder(hs, this.name);
     if (!folder.success) return folder;
 
     folderUrl = folder.value.webUrl;
     const file = await driveGetOrCreateExcelFile(
       hs,
-      `HistoryCabinet-${ym}.xlsx`,
+      `${this.baseFilename}-${ym}.xlsx`,
       folder.value.id
     );
     if (!file.success) return file;

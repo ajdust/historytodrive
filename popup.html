@@ -19,17 +19,26 @@
         font-size: 14px;
     }
 
+    #tag-area button {
+        width: 70px;
+    }
+
     .folder-url {
         font-size: 12px;
     }
 
-    #title-header {
+    .header {
         font-variant: small-caps;
+        color: rgb(50, 50, 50);
+        font-size: 0.9rem;
+        font-weight: 300;
+    }
+
+    #title-header {
         margin-bottom: 0;
         margin-top: 5px;
-        color: gray;
-        text-align: center;
-        font-size: 1rem;
+        padding-left: 8px;
+        padding-right: 8px;
     }
 
     .settings-view {
@@ -40,16 +49,7 @@
         display: block;
     }
 
-    .settings-view .boxes {
-        /*display: grid;*/
-        /*grid-template-columns: repeat(8, 1fr);*/
-        /*grid-gap: 0px;*/
-        /*grid-template-areas: "a" "b";*/
-        /*align-items: start;*/
-    }
-
     .settings-view .box {
-        background-color: rgb(250, 250, 245);
         display: flex;
         flex-direction: column;
     }
@@ -88,12 +88,9 @@
         padding-bottom: 10px;
     }
 
-    #tag-area h3 {
-        font-variant: small-caps;
+    #tag-header {
         margin-bottom: 5px;
-        margin-top: 10px;
-        color: gray;
-        font-size: 0.9rem;
+        margin-top: 15px;
     }
 
     #tags {
@@ -103,7 +100,7 @@
 
     .tag {
         display: flex;
-        flex-display: row;
+        padding-bottom: 2px;
     }
 
     .tag-label {
@@ -130,7 +127,7 @@
 <body>
 <div id="content" class="show-settings-view has-disabled">
     <div class="settings-view">
-        <h3 id="title-header">History Cabinet</h3>
+        <h3 id="title-header" class="header">history to drive</h3>
         <div class="boxes">
             <div class="box box-input">
                 <button type="button" class="has-disabled" id="enable-button">
@@ -142,9 +139,9 @@
             </div>
             <div class="box box-info">
                 <div class="has-enabled">
-                    <a class="folder-url" target="_blank" href="#">View in OneDrive</a>
+                    <a class="folder-url" target="_blank" href="#">Open in OneDrive</a>
                     <div id="tag-area">
-                        <h3>Tags</h3>
+                        <h3 id="tag-header" class="header">tags</h3>
                         <div id="tags">
                         </div>
                         <div id="add-tag">
@@ -159,8 +156,8 @@
 </div>
 <div id="tag-template" style="display:none">
     <div class="tag">
-        <input type="checkbox" class="tag-checkbox" checked value="_TAG_TEXT_"/><span
-            class="tag-label">_TAG_TEXT_</span>
+        <input type="checkbox" class="tag-checkbox" id="_TAG_ID_" checked value="_TAG_TEXT_"/>
+        <label for="_TAG_ID_" class="tag-label">_TAG_TEXT_</label>
         <button class="remove-tag-button" value="_TAG_TEXT_" type="button">Remove</button>
     </div>
 </div>

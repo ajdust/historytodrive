@@ -28,7 +28,12 @@ function initTags(tags: Shared.Tag[]) {
   const tagsEl = document.getElementById("tags")!;
   let tagsElBuilder = "";
   for (let tag of tags) {
-    let html = template.replace(/_TAG_TEXT_/g, tag.text);
+    let html = template
+      .replace(/_TAG_TEXT_/g, tag.text)
+      .replace(
+        /_TAG_ID_/g,
+        `tag_checkbox_${tag.text.replace(/[^(\w\d)]/g, "")}`
+      );
     if (!tag.enabled) {
       html = html.replace(/checked/g, "");
     }
@@ -61,6 +66,8 @@ async function storeTags() {
 
 async function addTag(tag: Shared.Tag) {
   const tags = (<any>window).tags as Shared.Tag[];
+  if (tags.some((t) => t.text === tag.text)) return;
+
   tags.push(tag);
   initTags(tags);
   await storeTags();
@@ -128,7 +135,7 @@ async function initPopup() {
     }
 
     addTagButton.setAttribute("disabled", "");
-    await addTag({ enabled: true, text: addTagInput.value });
+    await addTag({ enabled: true, text: addTagInput.value.trim() });
     addTagButton.removeAttribute("disabled");
     addTagInput.value = "";
   });
