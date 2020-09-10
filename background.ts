@@ -542,11 +542,11 @@ class MessageHandler {
   }
 
   async track(data: Shared.TrackData, tryCount: number = 0) {
-    console.log(data);
     if (!(await this.isTracking())) return;
 
     let setup = await this.setupFile();
     if (!setup.success) {
+      console.warn(setup.error);
       if (tryCount > 50) {
         await this.disableTracking(setup.error);
         return;
@@ -583,6 +583,7 @@ class MessageHandler {
     );
 
     if (!append.success) {
+      console.warn(append.error);
       if (tryCount > 50) {
         await this.disableTracking(append.error);
         return;
