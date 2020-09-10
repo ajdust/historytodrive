@@ -557,6 +557,7 @@ class MessageHandler {
         await this.refreshToken();
       }
 
+      await this.clearFileData();
       await this.track(data, tryCount + 1);
       return;
     }
@@ -565,7 +566,20 @@ class MessageHandler {
     const append = await driveAppendRowToExcelFile(
       setup.value.headers,
       setup.value.file.fileId,
-      [[data.timestamp, tag, data.title, data.host, data.url, data.userAgent]]
+      [
+        [
+          data.timestamp,
+          tag,
+          data.title,
+          data.host,
+          data.url,
+          data.userAgent,
+          "",
+          "",
+          "",
+          "",
+        ],
+      ]
     );
 
     if (!append.success) {
@@ -579,6 +593,7 @@ class MessageHandler {
         await this.refreshToken();
       }
 
+      await this.clearFileData();
       await this.track(data, tryCount + 1);
       return;
     }
