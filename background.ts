@@ -1,4 +1,3 @@
-/// <reference path="node_modules/Dropbox/dist/Dropbox-sdk.min.d.ts" />
 /// <reference path="node_modules/@types/chrome/index.d.ts" />
 /// <reference path="node_modules/dexie/dist/dexie.d.ts" />
 /// <reference path="node_modules/xlsx/types/index.d.ts" />
@@ -21,8 +20,12 @@ function authenticate(details: {
   });
 }
 
-function getRedirectURL(): string {
-  return chrome.identity.getRedirectURL("dropbox");
+function getRedirectURL(path: string): string {
+  return chrome.identity.getRedirectURL(path);
+}
+
+function getURL(path: string): string {
+  return chrome.runtime.getURL(path);
 }
 
 function getClientId(): string {
@@ -112,13 +115,50 @@ function getUrlParameters(url: string): Map<string, string> {
   return params;
 }
 
-async function getPKCEAccessToken(
-  oauth2TokenUrl: string,
-  codeFromQueryParameter: string,
-  permittedRedirectUri: string,
-  codeVerifier: string,
-  clientId: string
-): Promise<{
+async function authenticateForPKCECode(oauth: {
+  interactive: boolean;
+  oauthAuthorizeUri: string;
+  clientId: string;
+  redirectUri: string;
+  scopes: string[];
+}): Promise<{ verifier: string; code: string }> {
+  // See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow#request-an-authorization-code
+  // and https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth?view=odsp-graph-online#authentication-scopes
+  // TODO: replace randomString with randomCryptoString method
+  const [authState, codeVerifier] = [randomString(50), randomString(50)];
+  const authUrl =
+    `${oauth.oauthAuthorizeUri}?` +
+    [
+      `client_id=${oauth.clientId}`,
+      `redirect_uri=${encodeURIComponent(oauth.redirectUri)}`,
+      `scope=${encodeURIComponent(oauth.scopes.join(" "))}`,
+      `state=${authState}`,
+      "response_type=code",
+      "code_challenge_method=S256",
+      `code_challenge=${await sha256(codeVerifier)}`,
+    ].join("&");
+
+  const redirectedUrl = await authenticate({
+    url: authUrl,
+    interactive: oauth.interactive,
+  });
+
+  const params = getUrlParameters(redirectedUrl);
+  if (params.get("state") !== authState)
+    throw "Redirected URI does not contain expected 'state=' in query parameters";
+  if (!params.has("code"))
+    throw "Redirected URI does not contain expected 'code=' in query parameters";
+
+  return { verifier: codeVerifier, code: params.get("code")! };
+}
+
+async function getPKCEAccessToken(oauth: {
+  clientId: string;
+  oauthTokenUri: string;
+  redirectUri: string;
+  code: string;
+  codeVerifier: string;
+}): Promise<{
   uid: string;
   access_token: string;
   expires_in: number;
@@ -126,13 +166,15 @@ async function getPKCEAccessToken(
   scope: string;
   account_id: string;
 }> {
-  const response = await fetch(oauth2TokenUrl, {
-    body:
-      `code=${encodeURIComponent(codeFromQueryParameter)}` +
-      `&grant_type=authorization_code` +
-      `&redirect_uri=${encodeURIComponent(permittedRedirectUri)}` +
-      `&code_verifier=${encodeURIComponent(codeVerifier)}` +
-      `&client_id=${encodeURIComponent(clientId)}`,
+  // See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow#request-an-access-token
+  const response = await fetch(oauth.oauthTokenUri, {
+    body: [
+      `client_id=${encodeURIComponent(oauth.clientId)}`,
+      `grant_type=authorization_code`,
+      `redirect_uri=${encodeURIComponent(oauth.redirectUri)}`,
+      `code=${encodeURIComponent(oauth.code)}`,
+      `code_verifier=${encodeURIComponent(oauth.codeVerifier)}`,
+    ].join("&"),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     method: "POST",
   });
@@ -140,59 +182,225 @@ async function getPKCEAccessToken(
   if (response.status === 200) return await response.json();
 
   throw (
-    `Error: ${response.status} from ${oauth2TokenUrl}: ` +
+    `Error: ${response.status} from ${oauth.oauthTokenUri}: ` +
     (await response.text())
   );
+}
+
+async function refreshAccessToken(oauth: {
+  clientId: string;
+  oauthRefreshUri: string;
+  redirectUri: string;
+  refreshToken: string;
+}): Promise<{
+  uid: string;
+  access_token: string;
+  expires_in: number;
+  token_type: string;
+  id_token: string;
+  scopes: string;
+}> {
+  const response = await fetch(oauth.oauthRefreshUri, {
+    method: "POST",
+    body: [
+      `client_id=${encodeURIComponent(oauth.clientId)}`,
+      `grant_type=refresh_token`,
+      `refresh_token=${encodeURIComponent(oauth.refreshToken)}`,
+    ].join("&"),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  });
+
+  if (response.status === 200) return await response.json();
+
+  throw (
+    `Error: ${response.status} from ${oauth.oauthRefreshUri}: ` +
+    (await response.text())
+  );
+}
+
+/* Graph API calls */
+
+const driveUri = "https://graph.microsoft.com/v1.0/me/drive";
+
+// Get headers for requests to drive API
+function GetDriveHeaders(accessToken: string): Headers {
+  return new Headers({
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  });
+}
+
+// List items in a folder
+async function ListChildren(
+  headers: Headers,
+  folderPath: string
+): Promise<{ status: number; content: any }> {
+  const response = await fetch(`${driveUri}/${folderPath}/children`, {
+    headers: headers,
+  });
+
+  const content = await response.json();
+  return { status: response.status, content: content };
+}
+
+// Request to create a folder
+async function CreateFolder(
+  headers: Headers,
+  folderPath: string,
+  folderName: string
+): Promise<{ status: number; content: any }> {
+  const response = await fetch(`${driveUri}/${folderPath}/children`, {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify({
+      name: folderName,
+      folder: {},
+      "@microsoft.graph.conflictBehavior": "rename",
+    }),
+  });
+  return { status: response.status, content: await response.json() };
+}
+
+// Upload an Excel file with an empty table
+async function UploadEmptyExcelFile(
+  headers: Headers,
+  folderPath: string,
+  folderName: string,
+  filename: string
+): Promise<{ status: number; content: any }> {
+  const hs = new Headers();
+  headers.forEach((value, key) => hs.set(key, value));
+  const empty = await fetch(getURL("empty_table.xlsx"));
+  if (empty.status !== 200) {
+    throw `could not get empty excel file, got ${
+      empty.status
+    }: ${await empty.text()}`;
+  }
+
+  const emptyBlob = await empty.blob();
+  hs.set("Content-Type", emptyBlob.type);
+
+  const response = await fetch(
+    `${driveUri}/${folderPath}:/${folderName}/${filename}:/content`,
+    {
+      method: "PUT",
+      body: emptyBlob,
+      headers: hs,
+    }
+  );
+
+  return { status: response.status, content: await response.json() };
+}
+
+// Request to get a folder, creating it if it does not exist
+async function GetOrCreateFolder(
+  headers: Headers,
+  folderPath: string,
+  folderName: string
+): Promise<any> {
+  const list = await ListChildren(headers, folderPath);
+  if (list.status !== 200 && list.status !== 201) {
+    throw `${list.status} while listing ${folderPath}: ${list.content}`;
+  }
+
+  const matches = list.content.value.filter(
+    (v: any) => v.folder && v.name === folderName
+  );
+
+  if (matches.length > 0) {
+    return matches[0];
+  }
+
+  const create = await CreateFolder(headers, folderPath, folderName);
+  if (create.status !== 200 && create.status !== 201) {
+    throw `${create.status} while creating a folder: ${create.content}`;
+  }
+
+  return create.content;
+}
+
+// Request to get an excel file, creating it if it does not exist
+async function GetOrCreateExcelFile(
+  headers: Headers,
+  folderPath: string,
+  folderName: string,
+  filename: string
+): Promise<any> {
+  const folder = await GetOrCreateFolder(headers, folderPath, folderName);
+  const list = await ListChildren(headers, `items/${folder.id}`);
+  if (list.status !== 200 && list.status !== 201) {
+    throw `${list.status} while listing items/${folder.id}: ${list.content}`;
+  }
+
+  const matched = list.content.value.filter((v: any) => v.name === filename);
+  if (matched.length > 0) {
+    return matched[0];
+  }
+
+  const create = await UploadEmptyExcelFile(
+    headers,
+    folderPath,
+    folderName,
+    filename
+  );
+  if (create.status !== 200 && create.status !== 201) {
+    throw `${create.status} while uploading file: ${create.content}`;
+  }
+
+  return create.content;
+}
+
+// Append lines to an existing excel file
+async function AppendToExcelFile(
+  headers: Headers,
+  folderPath: string,
+  folderName: string,
+  filename: string,
+  values: string[][]
+): Promise<{ status: number; content: any }> {
+  const baseUri = "https://graph.microsoft.com/v1.0/me/drive";
+  const uri = `${baseUri}/${folderPath}/${folderName}/${filename}:/workbook/tables/History/rows/add`;
+  const response = await fetch(uri, {
+    method: "POST",
+    body: JSON.stringify({ index: null, values: values }),
+    headers: headers,
+  });
+
+  return { status: response.status, content: await response.json() };
 }
 
 /* Message handling */
 
 class MessageHandler {
-  private clientId: string;
+  private readonly clientId: string;
   private kvDb: KeyValueDb;
-  private dbx: DropboxTypes.Dropbox;
 
   constructor() {
     this.clientId = getClientId();
     this.kvDb = new KeyValueDb();
-    this.dbx = new Dropbox.Dropbox({
-      clientId: this.clientId,
-      fetch: window.fetch,
-    });
   }
 
   async enableTracking(): Promise<void> {
-    const [authState, codeVerifier] = [randomString(50), randomString(50)];
-    const redirectUrl = getRedirectURL();
-    const authUrl =
-      this.dbx.getAuthenticationUrl(redirectUrl, authState, "code") +
-      "&code_challenge_method=S256" +
-      `&code_challenge=${await sha256(codeVerifier)}`;
-
-    const redirectedUrl = await authenticate({
-      url: authUrl,
+    const codes = await authenticateForPKCECode({
       interactive: true,
+      oauthAuthorizeUri:
+        "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
+      clientId: this.clientId,
+      redirectUri: getRedirectURL("microsoft"),
+      scopes: ["openid", "files.readwrite"],
     });
 
-    const params = getUrlParameters(redirectedUrl);
-    if (params.get("state") !== authState)
-      throw "Redirected URI does not contain expected 'state=' in query parameters";
-    if (!params.has("code"))
-      throw "Redirected URI does not contain expected 'code=' in query parameters";
-
-    // See https://www.dropbox.com/developers/documentation/http/documentation#oauth2-token
-    const tokenResponse = await getPKCEAccessToken(
-      "https://api.dropbox.com/oauth2/token",
-      params.get("code")!,
-      redirectUrl,
-      codeVerifier,
-      this.clientId
-    );
+    const tokenResponse = await getPKCEAccessToken({
+      oauthTokenUri:
+        "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+      clientId: this.clientId,
+      redirectUri: getRedirectURL("microsoft"),
+      codeVerifier: codes.verifier,
+      code: codes.code,
+    });
 
     await this.kvDb.put("auth", tokenResponse);
-    this.dbx.setAccessToken(tokenResponse.access_token);
-    const echo = await this.dbx.checkUser({ query: "check" });
-    if (echo.result !== "check") throw `Expected check but got ${echo.result}`;
+    // TODO: check MS oauth success
 
     send(<MessageToPopup.EnabledTracking>{
       action: "tracking_is_enabled",
@@ -201,10 +409,6 @@ class MessageHandler {
 
   async disableTracking() {
     await this.kvDb.put("auth", {});
-    this.dbx = new DropboxTypes.Dropbox({
-      clientId: this.clientId,
-      fetch: window.fetch,
-    });
     send(<MessageToPopup.DisabledTracking>{
       action: "tracking_is_disabled",
     });

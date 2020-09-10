@@ -36,18 +36,8 @@ function getFiles(atPath) {
 
 async function copyToPublish() {
   await fsp.copyFile(
-    "./node_modules/dropbox/dist/Dropbox-sdk.min.js",
-    "./publish/Dropbox-sdk.js"
-  );
-
-  await fsp.copyFile(
     "./node_modules/dexie/dist/dexie.js",
     "./publish/dexie.js"
-  );
-
-  await fsp.copyFile(
-    "./node_modules/xlsx/dist/xlsx.full.min.js",
-    "./publish/xlsx.full.min.js"
   );
 
   await fsp.copyFile("./popup.html", "./publish/popup.html");
@@ -66,9 +56,13 @@ async function fixTscTypes() {
       const package = dtsMatch[1];
       if (package === "chokidar") continue;
       const packagePath = `./node_modules/@types/${package}`;
-      if (!(await fsp.stat(packagePath)).isDirectory(packagePath)) {
+      console.log(`Adding ${packagePath}`);
+      try {
+        await fsp.stat(packagePath);
+      } catch {
         await fsp.mkdir(packagePath);
       }
+
       await fsp.copyFile(file, path.join(packagePath, "index.d.ts"));
     }
   }
@@ -105,9 +99,10 @@ function watch() {
       let last = changes.pop();
       while (last) {
         process.stdout.write(
-          `${new Date().toISOString()} Copying file changes.\n`
+          `${new Date().toISOString()} Copying file changes for ${event}.\n`
         );
         await copyToPublish();
+        process.stdout.write("Done.");
         const latest = changes.pop();
         if (latest && latest > last) last = latest;
         else break;
