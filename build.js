@@ -35,6 +35,14 @@ function getFiles(atPath) {
 }
 
 async function copyToPublish() {
+  const cid = process.env.CLIENT_ID;
+  if (!cid) {
+    throw "Could not find CLIENT_ID environment variable";
+  }
+
+  const efile = await fsp.open("./publish/environment.js", "w+");
+  await efile.writeFile(`window.CLIENT_ID = "${cid}";`);
+
   await fsp.copyFile(
     "./node_modules/dexie/dist/dexie.js",
     "./publish/dexie.js"

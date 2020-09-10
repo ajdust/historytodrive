@@ -406,11 +406,9 @@ type FileData = {
 };
 
 class MessageHandler {
-  private readonly clientId: string;
   private kvDb: KeyValueDb;
 
   constructor() {
-    this.clientId = "";
     this.kvDb = new KeyValueDb();
   }
 
@@ -419,7 +417,7 @@ class MessageHandler {
       interactive: interactive,
       oauthAuthorizeUri:
         "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
-      clientId: this.clientId,
+      clientId: (<any>window).CLIENT_ID,
       redirectUri: getRedirectURL("microsoft"),
       scopes: ["openid", "files.readwrite"],
     });
@@ -427,7 +425,7 @@ class MessageHandler {
     const tokenResponse = await pkceGetAccessToken({
       oauthTokenUri:
         "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
-      clientId: this.clientId,
+      clientId: (<any>window).CLIENT_ID,
       redirectUri: getRedirectURL("microsoft"),
       codeVerifier: codes.verifier,
       code: codes.code,
@@ -442,6 +440,35 @@ class MessageHandler {
     }
 
     await this.notifyTrackingStatus();
+  }
+
+  async refreshToken() {
+    await this.clearFileData();
+    try {
+      const currentResponse = await this.getAuth();
+      if (currentResponse) {
+        const tokenResponse = await pkceRefreshAccessToken({
+          oauthRefreshUri:
+            "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+          clientId: (<any>window).CLIENT_ID,
+          refreshToken: currentResponse.refresh_token,
+        });
+
+        await this.setAuth(tokenResponse);
+        console.log("Token was refreshed.");
+        return;
+      }
+    } catch (exc) {
+      console.warn(exc);
+    }
+
+    try {
+      await this.enableTracking(false);
+      console.log("Non-interactive sign in was successful.");
+    } catch (exc) {
+      console.warn(exc);
+      await this.disableTracking(exc.toString());
+    }
   }
 
   async disableTracking(error: RequestError | undefined = undefined) {
@@ -510,35 +537,6 @@ class MessageHandler {
     await this.setFileData(fileData);
 
     return { success: true, value: { headers: hs, file: fileData } };
-  }
-
-  async refreshToken() {
-    await this.clearFileData();
-    try {
-      const currentResponse = await this.getAuth();
-      if (currentResponse) {
-        const tokenResponse = await pkceRefreshAccessToken({
-          clientId: this.clientId,
-          oauthRefreshUri:
-            "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
-          refreshToken: currentResponse.refresh_token,
-        });
-
-        await this.setAuth(tokenResponse);
-        console.log("Token was refreshed.");
-        return;
-      }
-    } catch (exc) {
-      console.warn(exc);
-    }
-
-    try {
-      await this.enableTracking(false);
-      console.log("Non-interactive sign in was successful.");
-    } catch (exc) {
-      console.warn(exc);
-      await this.disableTracking(exc.toString());
-    }
   }
 
   async track(data: Shared.TrackData, tryCount: number = 0) {

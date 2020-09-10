@@ -18,6 +18,7 @@
     },
     "background": {
         "scripts": [
+            "environment.js",
             "dexie.js",
             "browser-polyfill.js",
             "background.js"
