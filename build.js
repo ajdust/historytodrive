@@ -56,6 +56,8 @@ async function copyToPublish() {
   await fsp.copyFile("./empty_table.xlsx", "./publish/empty_table.xlsx");
   await fsp.copyFile("./popup.html", "./publish/popup.html");
   await fsp.copyFile("./manifest.json", "./publish/manifest.json");
+  await fsp.copyFile("./logo_48px.png", "./publish/logo_48px.png");
+  await fsp.copyFile("./logo_128px.png", "./publish/logo_128px.png");
 }
 
 // Copy */types/webextension.d.ts files to @types/*/webextension.d.ts to satisfy TypeScript
