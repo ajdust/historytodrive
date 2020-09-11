@@ -42,6 +42,7 @@ async function copyToPublish() {
 
   const efile = await fsp.open("./publish/environment.js", "w+");
   await efile.writeFile(`window.CLIENT_ID = "${cid}";`);
+  efile.close();
 
   await fsp.copyFile(
     "./node_modules/dexie/dist/dexie.js",
