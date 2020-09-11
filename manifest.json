@@ -25,7 +25,7 @@
             "background.js"
         ]
     },
-    "permissions": [ "tabs", "identity" ],
+    "permissions": [ "identity" ],
     "web_accessible_resources": ["empty_table.xlsx"],
     "content_security_policy": "script-src 'self'; object-src 'self'"
 }
