@@ -27,5 +27,12 @@
     },
     "permissions": [ "identity" ],
     "web_accessible_resources": ["empty_table.xlsx"],
-    "content_security_policy": "script-src 'self'; object-src 'self'"
+    "content_security_policy": "script-src 'self'; object-src 'self'",
+    "minimum_chrome_version": "70",
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "{0bd9affb-ed13-456a-b938-9fd3f9883307}",
+            "strict_min_version": "69"
+        }
+    }
 }
