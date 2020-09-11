@@ -279,7 +279,6 @@ async function driveCreateFolder(
     body: JSON.stringify({
       name: name,
       folder: {},
-      "@microsoft.graph.conflictBehavior": "rename",
     }),
   });
 
@@ -361,7 +360,8 @@ async function driveGetOrCreateExcelFile(
   if (!list.success) return list;
 
   const matched = list.value.filter(
-    (v) => (v as FileItem).file && v.name === filename
+    (v) =>
+      (v as FileItem).file && v.name.toLowerCase() === filename.toLowerCase()
   );
 
   if (matched.length > 0) {
