@@ -24,32 +24,39 @@ function setMode(mode: "enabled" | "disabled") {
 }
 
 function initTags(tags: Shared.Tag[]) {
-  const template = document.getElementById("tag-template")!.innerHTML;
   const tagsEl = document.getElementById("tags")!;
-  let tagsElBuilder = "";
-  for (let tag of tags) {
-    let html = template
-      .replace(/_TAG_TEXT_/g, tag.text)
-      .replace(
-        /_TAG_ID_/g,
-        `tag_checkbox_${tag.text.replace(/[^(\w\d)]/g, "")}`
-      );
-    if (!tag.enabled) {
-      html = html.replace(/checked/g, "");
-    }
-    tagsElBuilder += html;
-  }
+  tagsEl.textContent = null;
 
-  tagsEl.innerHTML = tagsElBuilder;
-  for (let cb of document.getElementsByClassName("tag-checkbox")!) {
-    (<HTMLInputElement>cb).addEventListener("change", async function () {
+  for (let tag of tags) {
+    const checkboxEl = <HTMLInputElement>document.createElement("input");
+    checkboxEl.classList.add("tag-checkbox");
+    checkboxEl.id = `tag_checkbox_${tag.text.replace(/[^(\w\d)]/g, "")}`;
+    if (tag.enabled) checkboxEl.checked = true;
+    checkboxEl.value = tag.text;
+    checkboxEl.type = "checkbox";
+
+    const labelEl = <HTMLLabelElement>document.createElement("label");
+    labelEl.htmlFor = checkboxEl.id;
+    labelEl.classList.add("tag-label");
+    labelEl.appendChild(document.createTextNode(tag.text));
+
+    const buttonEl = <HTMLButtonElement>document.createElement("button");
+    buttonEl.classList.add("remove-tag-button");
+    buttonEl.value = tag.text;
+    buttonEl.type = "button";
+    buttonEl.appendChild(document.createTextNode("Remove"));
+
+    const tagEl = <HTMLDivElement>document.createElement("div");
+    tagEl.classList.add("tag");
+    tagEl.append(checkboxEl, labelEl, buttonEl);
+    tagsEl.append(tagEl);
+
+    checkboxEl.addEventListener("change", async function () {
       await checkTag({ enabled: this.checked, text: this.value });
     });
-  }
 
-  for (let rb of document.getElementsByClassName("remove-tag-button")!) {
-    (<HTMLButtonElement>rb).addEventListener("click", async function () {
-      rb.setAttribute("disabled", "");
+    buttonEl.addEventListener("click", async function () {
+      buttonEl.setAttribute("disabled", "");
       await removeTag(this.value);
     });
   }
