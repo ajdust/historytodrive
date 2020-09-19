@@ -6,3 +6,10 @@ The extension sends data only to the Excel spreadsheet. So, no data or authoriza
 
 Why would you want to track your browser history? There are many reasons, I can only speak for myself. I want more control over and insight into my "digital exhaust". I know Google Chrome and Mozilla Firefox both offer history tracking and syncing. However, there is no easy way to download, query, tag, analyze, and combine this browsing data. Moreover, it's a burden to keep tabs on more online-only services with their own terms and conditions. With a spreadsheet instead, I can control the data however I want to.
 
+
+# Store
+
+- [View in the Chrome store (unlisted)](https://chrome.google.com/webstore/detail/history-to-drive/cjhmkclgfcdhifojlgaldlebnpkfgjnb)
+- [View in the Firefox store (experimental)](https://addons.mozilla.org/en-US/firefox/addon/history-to-drive/)
+
+The first version has a bug where non-interactive sign in fails the first time. So the user has to click 'Enable' for instance after not browsing long enough for the refresh token to expire (typically overnight, finding the fix is in progress).
