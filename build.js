@@ -58,6 +58,10 @@ async function copyToPublish() {
   await fsp.copyFile("./popup.html", "./publish/popup.html");
   await fsp.copyFile("./manifest.json", "./publish/manifest.json");
   await fsp.copyFile("./logo_48px.png", "./publish/logo_48px.png");
+  await fsp.copyFile(
+    "./logo_48px_disabled.png",
+    "./publish/logo_48px_disabled.png"
+  );
   await fsp.copyFile("./logo_128px.png", "./publish/logo_128px.png");
 }
 

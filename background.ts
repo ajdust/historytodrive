@@ -19,8 +19,22 @@ function getURL(path: string): string {
   return browser.runtime.getURL(path);
 }
 
-function send(message: any): Promise<any> {
-  return browser.runtime.sendMessage(message);
+function getManifestName(): string {
+  return browser.runtime.getManifest().name;
+}
+
+async function setIcon(file: string): Promise<void> {
+  await browser.browserAction.setIcon({ path: file });
+}
+
+async function send(message: any): Promise<void> {
+  try {
+    await browser.runtime.sendMessage(message);
+    return;
+  } catch (exc) {
+    console.warn(new Error(`could not send message: ${exc}; ${message}`));
+    return;
+  }
 }
 
 function listen<T extends (message: any, ...other: any[]) => void>(
@@ -103,6 +117,16 @@ function getUrlParameters(url: string): Map<string, string> {
   return params;
 }
 
+interface RequestError {
+  status: number;
+  context: string;
+  response: string;
+}
+
+type Either<TSuccess, TError> =
+  | { success: true; value: TSuccess }
+  | { success: false; error: TError };
+
 /* Authentication */
 
 async function pkceAuthenticate(oauth: {
@@ -137,9 +161,13 @@ async function pkceAuthenticate(oauth: {
 
   const params = getUrlParameters(redirectedUrl);
   if (params.get("state") !== authState)
-    throw "Redirected URI does not contain expected 'state=' in query parameters";
+    throw new Error(
+      "Redirected URI does not contain expected 'state=' in query parameters"
+    );
   if (!params.has("code"))
-    throw "Redirected URI does not contain expected 'code=' in query parameters";
+    throw new Error(
+      "Redirected URI does not contain expected 'code=' in query parameters"
+    );
 
   return { verifier: codeVerifier, code: params.get("code")! };
 }
@@ -176,9 +204,8 @@ async function pkceGetAccessToken(oauth: {
 
   if (response.status === 200) return await response.json();
 
-  throw (
-    `Error: ${response.status} from ${oauth.oauthTokenUri}: ` +
-    (await response.text())
+  throw new Error(
+    `${response.status} from ${oauth.oauthTokenUri}: ` + (await response.text())
   );
 }
 
@@ -199,9 +226,9 @@ async function pkceRefreshAccessToken(oauth: {
 
   if (response.status === 200) return await response.json();
 
-  throw (
-    `Error: ${response.status} from ${oauth.oauthRefreshUri}: ` +
-    (await response.text())
+  throw new Error(
+    `${response.status} from ${oauth.oauthRefreshUri}: ` +
+      (await response.text())
   );
 }
 
@@ -222,16 +249,6 @@ interface FolderItem extends DriveItem {
 interface FileItem extends DriveItem {
   file: { mimeType: string };
 }
-
-interface RequestError {
-  status: number;
-  context: string;
-  response: string;
-}
-
-type Either<TSuccess, TError> =
-  | { success: true; value: TSuccess }
-  | { success: false; error: TError };
 
 const driveUri = "https://graph.microsoft.com/v1.0/me/drive";
 
@@ -302,9 +319,9 @@ async function driveUploadEmptyExcelFile(
 ): Promise<Either<FileItem, RequestError>> {
   const empty = await fetch(getURL("empty_table.xlsx"));
   if (empty.status !== 200) {
-    throw `${
-      empty.status
-    } while fetching empty_table.xlsx: ${await empty.text()}`;
+    throw new Error(
+      `${empty.status} while fetching empty_table.xlsx: ${await empty.text()}`
+    );
   }
 
   const hs = new Headers();
@@ -406,13 +423,14 @@ type FileData = {
 };
 
 class MessageHandler {
-  private kvDb: KeyValueDb;
+  private readonly kvDb: KeyValueDb;
   private readonly name: string;
   private readonly baseFilename: string;
+  private lastStatus: boolean | undefined;
 
   constructor() {
     this.kvDb = new KeyValueDb();
-    this.name = browser.runtime.getManifest().name;
+    this.name = getManifestName();
     this.baseFilename = this.name.replace(/ /g, "");
   }
 
@@ -439,7 +457,9 @@ class MessageHandler {
     const setup = await this.setupFile();
     if (!setup.success) {
       const err = setup.error;
-      console.warn(`${err.status} while ${err.context}: ${err.response}`);
+      console.warn(
+        new Error(`${err.status} while ${err.context}: ${err.response}`)
+      );
       return;
     }
 
@@ -471,17 +491,21 @@ class MessageHandler {
       console.log("Non-interactive sign in was successful.");
     } catch (exc) {
       console.warn(exc);
-      await this.disableTracking(exc.toString());
+      // Disable if 'Requires user interaction'
+      const msg: string = exc.message ?? exc.toString();
+      if (msg.toLowerCase().indexOf("interact") >= 0) {
+        await this.disableTracking(msg);
+      }
     }
   }
 
-  async disableTracking(error: RequestError | undefined = undefined) {
+  async disableTracking(error: RequestError | string | undefined = undefined) {
     await this.clearAuth();
     await this.clearFileData();
-    if (error) {
+    if (typeof error === "string") await this.notifyTrackingStatus(error);
+    else if (typeof error === "object") {
       const msg = `${error.status} while ${error.context}: ${error.response}`;
       await this.notifyTrackingStatus(msg);
-      alert(`Please sign in again to enable ${this.name}`);
     } else {
       await this.notifyTrackingStatus();
     }
@@ -489,7 +513,13 @@ class MessageHandler {
 
   async isTracking(): Promise<boolean> {
     const auth = await this.getAuth();
-    return !!auth?.access_token;
+    const tracking = !!auth?.access_token;
+    if (this.lastStatus !== tracking) {
+      if (tracking) await setIcon("logo_48px.png");
+      else await setIcon("logo_48px_disabled.png");
+      this.lastStatus = tracking;
+    }
+    return tracking;
   }
 
   async notifyTrackingStatus(error: string | undefined = undefined) {
@@ -514,7 +544,7 @@ class MessageHandler {
   > {
     const ym = yearMonth();
     const auth = await this.getAuth();
-    if (auth === null) throw "Expected not null from getAuth";
+    if (auth === null) throw new Error("Expected not null from getAuth");
 
     const hs = driveGetHeaders(auth.access_token);
     let fileData = await this.getFileData();
