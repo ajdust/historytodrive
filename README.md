@@ -12,4 +12,3 @@ Why would you want to track your browser history? There are many reasons, I can 
 - [View in the Chrome store (unlisted)](https://chrome.google.com/webstore/detail/history-to-drive/cjhmkclgfcdhifojlgaldlebnpkfgjnb)
 - [View in the Firefox store (experimental)](https://addons.mozilla.org/en-US/firefox/addon/history-to-drive/)
 
-The first version has a bug where non-interactive sign in fails the first time. So the user has to click 'Enable' for instance after not browsing long enough for the refresh token to expire (typically overnight, finding the fix is in progress).
