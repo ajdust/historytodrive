@@ -40,6 +40,10 @@ async function copyToPublish() {
     throw "Could not find CLIENT_ID environment variable";
   }
 
+  if (!fs.existsSync("./publish")) {
+    fs.mkdirSync("./publish");
+  }
+
   const efile = await fsp.open("./publish/environment.js", "w+");
   await efile.writeFile(`window.CLIENT_ID = "${cid}";`);
   efile.close();
