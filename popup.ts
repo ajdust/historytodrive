@@ -181,6 +181,12 @@ async function addRedactionRule(rule: Shared.RedactionRule) {
     return;
   }
 
+  try {
+    new RegExp(rule.replace);
+  } catch (e) {
+    return;
+  }
+
   rules.push(rule);
   initRedactionRules(rules);
   await storeRedactionRule();
@@ -239,7 +245,8 @@ async function initPopup() {
     toggleMoreLink = <HTMLLinkElement>(
       document.getElementById("toggle-more-link")
     ),
-    moreArea = <HTMLDivElement>document.getElementById("more-area");
+    moreArea = <HTMLDivElement>document.getElementById("more-area"),
+    tagArea = <HTMLDivElement>document.getElementById("tag-area");
 
   enableButton.addEventListener("click", async () => {
     enableButton.setAttribute("disabled", "");
@@ -257,6 +264,7 @@ async function initPopup() {
 
   toggleMoreLink.addEventListener("click", () => {
     moreArea.style.display = moreArea.style.display === "none" ? "" : "none";
+    tagArea.style.display = tagArea.style.display === "none" ? "" : "none";
   });
 
   addTagInput.addEventListener("keyup", async (e) => {
