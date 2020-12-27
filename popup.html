@@ -19,10 +19,6 @@
         font-size: 14px;
     }
 
-    #tag-area button {
-        width: 70px;
-    }
-
     .folder-url {
         font-size: 12px;
     }
@@ -109,6 +105,36 @@
         margin-left: 5px;
     }
 
+    #more-area {
+        padding-bottom: 10px;
+    }
+
+    #redaction-rules-header {
+        margin-bottom: 5px;
+        margin-top: 15px;
+    }
+
+    #redaction-rules {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .redaction-rule {
+        display: flex;
+        padding-bottom: 2px;
+    }
+
+    .redaction-rule-label {
+        flex-grow: 1;
+        font-size: 14px;
+        margin-left: 5px;
+    }
+
+    .remove-button {
+        background: url("data:image/gif;base64,R0lGODlhEAAQAPMAANXV1e3t7d/f39HR0dvb2/Hx8dTU1OLi4urq6mZmZpmZmf///wAAAAAAAAAAAAAAACH5BAEAAAwALAAAAAAQABAAAARBkMlJq71Yrp3ZXkr4WWCYnOZSgQVyEMYwJCq1nHhe20qgCAoA7QLyAYU7njE4JPV+zOSkCEUSFbmTVPPpbjvgTAQAOw==") no-repeat;
+        border: 0;
+    }
+
     #add-tag {
         display: flex;
         flex-direction: row;
@@ -140,6 +166,7 @@
             <div class="box box-info">
                 <div class="has-enabled">
                     <a class="folder-url" target="_blank" href="#">Open in OneDrive</a>
+                    <a id="toggle-more-link" href="#" title="Show settings">Toggle More</a>
                     <div id="tag-area">
                         <h3 id="tag-header" class="header">tags</h3>
                         <div id="tags">
@@ -147,6 +174,20 @@
                         <div id="add-tag">
                             <input type="text" id="add-tag-input" maxlength="30"/>
                             <button type="button" id="add-tag-button">Add</button>
+                        </div>
+                    </div>
+                    <div id="more-area" style="display:none">
+                        <h3 id="redaction-rules-header" class="header" title="Modify URLs by using regular expression replacements">Redact URLs</h3>
+                        <div id="redaction-rules">
+                        </div>
+                        <div id="add-redaction-rule">
+                            <label for="add-redaction-rule-input-description">Description</label>
+                            <input type="text" id="add-redaction-rule-input-description"/>
+                            <label for="add-redaction-rule-input-replace">Replace</label>
+                            <input type="text" id="add-redaction-rule-input-replace"/>
+                            <label for="add-redaction-rule-input-with">With</label>
+                            <input type="text" id="add-redaction-rule-input-with"/>
+                            <button type="button" id="add-redaction-rule-button">Add Rule</button>
                         </div>
                     </div>
                 </div>

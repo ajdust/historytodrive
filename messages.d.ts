@@ -11,6 +11,13 @@ declare namespace Shared {
     enabled: boolean;
     text: string;
   };
+
+  export type RedactionRule = {
+    enabled: boolean;
+    replace: string;
+    with: string;
+    description: string;
+  };
 }
 
 declare namespace MessageToBackground {
@@ -41,13 +48,19 @@ declare namespace MessageToBackground {
     tags: Shared.Tag[];
   };
 
+  export type SetRedactionRules = {
+    action: "set_redaction_rules";
+    redaction_rules: Shared.RedactionRule[];
+  };
+
   export type Any =
     | Log
     | Track
     | EnableTracking
     | DisableTracking
     | PopupNeedsInit
-    | SetTags;
+    | SetTags
+    | SetRedactionRules;
 }
 
 declare namespace MessageToPopup {
@@ -55,6 +68,7 @@ declare namespace MessageToPopup {
     action: "tracking_is_enabled";
     url: string;
     tags: Shared.Tag[];
+    redaction_rules: Shared.RedactionRule[];
   };
 
   export type DisabledTracking = {

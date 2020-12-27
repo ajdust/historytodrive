@@ -526,10 +526,12 @@ class MessageHandler {
     if (await this.isTracking()) {
       const { folderUrl } = (await this.getFileData())!;
       const tags = await this.getTags();
+      const rules = await this.getRedactionRules();
       await send(<MessageToPopup.EnabledTracking>{
         action: "tracking_is_enabled",
         url: folderUrl,
         tags: tags,
+        redaction_rules: rules,
       });
     } else {
       await send(<MessageToPopup.DisabledTracking>{
@@ -595,6 +597,7 @@ class MessageHandler {
     }
 
     const tag = await this.getJoinedTag();
+    const url = await this.getRedactedUrl(data.url);
     const append = await driveAppendRowToExcelFile(
       setup.value.headers,
       setup.value.file.fileId,
@@ -604,7 +607,7 @@ class MessageHandler {
           tag,
           data.title,
           data.host,
-          data.url,
+          url,
           data.userAgent,
           "",
           "",
@@ -676,11 +679,51 @@ class MessageHandler {
       await this.setTags(defaultTags);
       return defaultTags;
     }
+
     return tags;
+  }
+
+  async getRedactedUrl(url: string): Promise<string> {
+    try {
+      const rules = await this.getRedactionRules();
+      for (const rule of rules) {
+        if (rule.enabled)
+          url = url.replace(new RegExp(rule.replace), rule.with);
+      }
+
+      return url;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  async getRedactionRules(): Promise<Shared.RedactionRule[]> {
+    const redacting = await this.kvDb.get<Shared.RedactionRule[]>(
+      "redaction_rules",
+      []
+    );
+    if (redacting.length === 0) {
+      const defaultRedaction = [
+        {
+          enabled: true,
+          replace: "(code|access_token|redirect_uri|state|nonce)=[^&]*",
+          with: "$1=redacted",
+          description: "OAuth parameters",
+        },
+      ];
+      await this.setRedactionRules(defaultRedaction);
+      return defaultRedaction;
+    }
+
+    return redacting;
   }
 
   async setTags(tags: Shared.Tag[]) {
     await this.kvDb.put("tags", tags ?? []);
+  }
+
+  async setRedactionRules(regexReplaces: Shared.RedactionRule[]) {
+    await this.kvDb.put("redaction_rules", regexReplaces);
   }
 
   async log(message: string) {
@@ -703,5 +746,7 @@ listen(async (req: MessageToBackground.Any) => {
     await mh.disableTracking();
   } else if (req.action === "set_tags") {
     await mh.setTags(req.tags);
+  } else if (req.action === "set_redaction_rules") {
+    await mh.setRedactionRules(req.redaction_rules);
   }
 });
