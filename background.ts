@@ -32,7 +32,9 @@ async function send(message: any): Promise<void> {
     await browser.runtime.sendMessage(message);
     return;
   } catch (exc) {
-    console.warn(new Error(`could not send message: ${exc}; ${message}`));
+    console.warn(
+      new Error(`could not send message: ${exc}; ${JSON.stringify(message)}`)
+    );
     return;
   }
 }
@@ -688,7 +690,7 @@ class MessageHandler {
       const rules = await this.getRedactionRules();
       for (const rule of rules) {
         if (rule.enabled)
-          url = url.replace(new RegExp(rule.replace), rule.with);
+          url = url.replace(new RegExp(rule.replace, "gi"), rule.with);
       }
 
       return url;
