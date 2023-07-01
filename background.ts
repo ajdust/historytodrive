@@ -70,7 +70,10 @@ class KeyValueDb extends Dexie.Dexie {
 
 function yearMonth(): string {
   const dt = new Date();
-  return `${dt.getFullYear()}-${dt.getMonth() + 1}`;
+  const month = dt.getMonth() + 1;
+  return month < 10
+    ? `${dt.getFullYear()}-0${month}`
+    : `${dt.getFullYear()}-${month}`;
 }
 
 async function randomString(): Promise<string> {
